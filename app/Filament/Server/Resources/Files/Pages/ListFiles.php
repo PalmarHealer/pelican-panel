@@ -359,82 +359,80 @@ class ListFiles extends ListRecords
                     }),
             ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    BulkAction::make('move')
-                        ->authorize(fn () => user()?->can(Permission::ACTION_FILE_UPDATE, $server))
-                        ->schema([
-                            TextInput::make('location')
-                                ->label(trans('server/file.actions.move.directory'))
-                                ->hint(trans('server/file.actions.move.directory_hint'))
-                                ->required()
-                                ->live(),
-                            TextEntry::make('new_location')
-                                ->state(fn (Get $get) => resolve_path('./' . join_paths($this->path, $get('location') ?? ''))),
-                        ])
-                        ->action(function (Collection $files, $data) {
-                            $location = $data['location'];
+                BulkAction::make('move')
+                    ->authorize(fn () => user()?->can(Permission::ACTION_FILE_UPDATE, $server))
+                    ->schema([
+                        TextInput::make('location')
+                            ->label(trans('server/file.actions.move.directory'))
+                            ->hint(trans('server/file.actions.move.directory_hint'))
+                            ->required()
+                            ->live(),
+                        TextEntry::make('new_location')
+                            ->state(fn (Get $get) => resolve_path('./' . join_paths($this->path, $get('location') ?? ''))),
+                    ])
+                    ->action(function (Collection $files, $data) {
+                        $location = $data['location'];
 
-                            $files = $files->map(fn ($file) => ['to' => join_paths($location, $file['name']), 'from' => $file['name']])->toArray();
-                            $this->getDaemonFileRepository()->renameFiles($this->path, $files);
+                        $files = $files->map(fn ($file) => ['to' => join_paths($location, $file['name']), 'from' => $file['name']])->toArray();
+                        $this->getDaemonFileRepository()->renameFiles($this->path, $files);
 
-                            Activity::event('server:file.rename')
-                                ->property('directory', $this->path)
-                                ->property('files', $files)
-                                ->log();
+                        Activity::event('server:file.rename')
+                            ->property('directory', $this->path)
+                            ->property('files', $files)
+                            ->log();
 
-                            Notification::make()
-                                ->title(trans('server/file.actions.move.bulk_notification', ['count' => count($files), 'directory' => resolve_path(join_paths($this->path, $location))]))
-                                ->success()
-                                ->send();
+                        Notification::make()
+                            ->title(trans('server/file.actions.move.bulk_notification', ['count' => count($files), 'directory' => resolve_path(join_paths($this->path, $location))]))
+                            ->success()
+                            ->send();
 
-                            $this->refreshPage();
-                        }),
-                    BulkAction::make('archive')
-                        ->authorize(fn () => user()?->can(Permission::ACTION_FILE_ARCHIVE, $server))
-                        ->schema([
-                            TextInput::make('name')
-                                ->label(trans('server/file.actions.archive.archive_name'))
-                                ->placeholder(fn () => 'archive-' . str(Carbon::now()->toRfc3339String())->replace(':', '')->before('+0000') . 'Z')
-                                ->suffix('.tar.gz'),
-                        ])
-                        ->action(function ($data, Collection $files) {
-                            $files = $files->map(fn ($file) => $file['name'])->toArray();
+                        $this->refreshPage();
+                    }),
+                BulkAction::make('archive')
+                    ->authorize(fn () => user()?->can(Permission::ACTION_FILE_ARCHIVE, $server))
+                    ->schema([
+                        TextInput::make('name')
+                            ->label(trans('server/file.actions.archive.archive_name'))
+                            ->placeholder(fn () => 'archive-' . str(Carbon::now()->toRfc3339String())->replace(':', '')->before('+0000') . 'Z')
+                            ->suffix('.tar.gz'),
+                    ])
+                    ->action(function ($data, Collection $files) {
+                        $files = $files->map(fn ($file) => $file['name'])->toArray();
 
-                            $archive = $this->getDaemonFileRepository()->compressFiles($this->path, $files, $data['name']);
+                        $archive = $this->getDaemonFileRepository()->compressFiles($this->path, $files, $data['name']);
 
-                            Activity::event('server:file.compress')
-                                ->property('name', $archive['name'])
-                                ->property('directory', $this->path)
-                                ->property('files', $files)
-                                ->log();
+                        Activity::event('server:file.compress')
+                            ->property('name', $archive['name'])
+                            ->property('directory', $this->path)
+                            ->property('files', $files)
+                            ->log();
 
-                            Notification::make()
-                                ->title(trans('server/file.actions.archive.notification'))
-                                ->body($archive['name'])
-                                ->success()
-                                ->send();
+                        Notification::make()
+                            ->title(trans('server/file.actions.archive.notification'))
+                            ->body($archive['name'])
+                            ->success()
+                            ->send();
 
-                            $this->refreshPage();
-                        }),
-                    DeleteBulkAction::make()
-                        ->authorize(fn () => user()?->can(Permission::ACTION_FILE_DELETE, $server))
-                        ->action(function (Collection $files) {
-                            $files = $files->map(fn ($file) => $file['name'])->toArray();
-                            $this->getDaemonFileRepository()->deleteFiles($this->path, $files);
+                        $this->refreshPage();
+                    }),
+                DeleteBulkAction::make()
+                    ->authorize(fn () => user()?->can(Permission::ACTION_FILE_DELETE, $server))
+                    ->action(function (Collection $files) {
+                        $files = $files->map(fn ($file) => $file['name'])->toArray();
+                        $this->getDaemonFileRepository()->deleteFiles($this->path, $files);
 
-                            Activity::event('server:file.delete')
-                                ->property('directory', $this->path)
-                                ->property('files', $files)
-                                ->log();
+                        Activity::event('server:file.delete')
+                            ->property('directory', $this->path)
+                            ->property('files', $files)
+                            ->log();
 
-                            Notification::make()
-                                ->title(trans('server/file.actions.delete.bulk_notification', ['count' => count($files)]))
-                                ->success()
-                                ->send();
+                        Notification::make()
+                            ->title(trans('server/file.actions.delete.bulk_notification', ['count' => count($files)]))
+                            ->success()
+                            ->send();
 
-                            $this->refreshPage();
-                        }),
-                ]),
+                        $this->refreshPage();
+                    }),
 
                 Action::make('new_file')
                     ->authorize(fn () => user()?->can(Permission::ACTION_FILE_CREATE, $server))
