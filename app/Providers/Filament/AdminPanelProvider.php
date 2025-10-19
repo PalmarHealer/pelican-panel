@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use AchyutN\FilamentLogViewer\FilamentLogViewer;
+use App\Extensions\ExtensionManager;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Navigation\NavigationGroup;
@@ -12,18 +13,24 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-        return parent::panel($panel)
+        // Discover extensions
+        $extensionManager = app(ExtensionManager::class);
+        $extensionManager->discover();
+        $extensionManager->registerAll();
+
+        $panel = parent::panel($panel)
             ->id('admin')
             ->path('admin')
             ->homeUrl('/')
             ->breadcrumbs(false)
             ->sidebarCollapsibleOnDesktop(fn () => !$panel->hasTopNavigation())
-            ->userMenuItems([
-                Action::make('exit_admin')
+            ->userMenuItems(array_merge([
+                'exit_admin' => Action::make('exit_admin')
                     ->label(fn () => trans('profile.exit_admin'))
                     ->url(fn () => Filament::getPanel('app')->getUrl())
                     ->icon('tabler-arrow-back'),
-            ])
+            ], $extensionManager->getUserMenuItemsForPanel('admin')))
+            ->navigationItems($extensionManager->getNavigationItemsForPanel('admin'))
             ->navigationGroups([
                 NavigationGroup::make(fn () => trans('admin/dashboard.server'))
                     ->collapsible(false),
@@ -40,5 +47,10 @@ class AdminPanelProvider extends PanelProvider
                     ->navigationGroup(fn () => trans('admin/dashboard.advanced'))
                     ->navigationIcon('tabler-file-info'),
             ]);
+
+        // Register extension components
+        $extensionManager->registerPanelComponents($panel, 'admin');
+
+        return $panel;
     }
 }

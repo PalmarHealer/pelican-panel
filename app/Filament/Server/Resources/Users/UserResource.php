@@ -91,24 +91,33 @@ class UserResource extends Resource
         $tabs = [];
         $permissionsArray = [];
 
+        // Get permission data with descriptions
+        $allPermissions = Permission::permissions();
+
         foreach (Permission::permissionData() as $data) {
             $options = [];
             $descriptions = [];
+            $permissionName = $data['name'];
+
+            // Get descriptions from Permission::permissions() which handles both core and extension permissions
+            $permissionInfo = $allPermissions->get($permissionName);
 
             foreach ($data['permissions'] as $permission) {
                 $options[$permission] = str($permission)->headline();
-                $descriptions[$permission] = trans('server/user.permissions.' . $data['name'] . '_' . str($permission)->replace('-', '_'));
-                $permissionsArray[$data['name']][] = $permission;
+                // Use custom descriptions from Permission::permissions() instead of trans()
+                $descriptions[$permission] = $permissionInfo['keys'][$permission] ?? str($permission)->headline();
+                $permissionsArray[$permissionName][] = $permission;
             }
 
-            $tabs[] = Tab::make($data['name'])
-                ->label(str($data['name'])->headline())
+            $tabs[] = Tab::make($permissionName)
+                ->label(str($permissionName)->headline())
                 ->schema([
                     Section::make()
-                        ->description(trans('server/user.permissions.' . $data['name'] . '_desc'))
+                        // Use custom description from Permission::permissions() instead of trans()
+                        ->description($permissionInfo['description'] ?? '')
                         ->icon($data['icon'])
                         ->schema([
-                            CheckboxList::make($data['name'])
+                            CheckboxList::make($permissionName)
                                 ->hiddenLabel()
                                 ->bulkToggleable()
                                 ->columns(2)

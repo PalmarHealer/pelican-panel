@@ -106,6 +106,12 @@ class Permission extends Model implements Validatable
     public $timestamps = false;
 
     /**
+     * Custom extension permissions registered by extensions.
+     * Format: ['extension-id' => ['name' => '...', 'icon' => '...', 'permissions' => [...], 'descriptions' => [...]]]
+     */
+    protected static array $extensionPermissions = [];
+
+    /**
      * Fields that are not mass assignable.
      */
     protected $guarded = ['id', 'created_at', 'updated_at'];
@@ -124,6 +130,27 @@ class Permission extends Model implements Validatable
     }
 
     /**
+     * Register extension permissions.
+     *
+     * @param string $extensionId Extension identifier
+     * @param array $permissionData Permission data with name, icon, permissions, descriptions
+     */
+    public static function registerExtensionPermissions(string $extensionId, array $permissionData): void
+    {
+        static::$extensionPermissions[$extensionId] = $permissionData;
+    }
+
+    /**
+     * Get all registered extension permissions.
+     *
+     * @return array
+     */
+    public static function getExtensionPermissions(): array
+    {
+        return static::$extensionPermissions;
+    }
+
+    /**
      * All the permissions available on the system.
      *
      * @return array<int, array{
@@ -134,7 +161,7 @@ class Permission extends Model implements Validatable
      */
     public static function permissionData(): array
     {
-        return [
+        $basePermissions = [
             [
                 'name' => 'control',
                 'icon' => 'tabler-terminal-2',
@@ -186,6 +213,17 @@ class Permission extends Model implements Validatable
                 'permissions' => ['read'],
             ],
         ];
+
+        // Merge in dynamically registered extension permissions
+        foreach (static::$extensionPermissions as $extensionId => $permissionData) {
+            $basePermissions[] = [
+                'name' => $permissionData['name'],
+                'icon' => $permissionData['icon'] ?? 'tabler-puzzle',
+                'permissions' => $permissionData['permissions'],
+            ];
+        }
+
+        return $basePermissions;
     }
 
     /**
@@ -203,10 +241,26 @@ class Permission extends Model implements Validatable
         ];
 
         foreach (static::permissionData() as $data) {
-            $permissions[$data['name']] = [
-                'description' => trans('server/users.permissions.' . $data['name'] . '_desc'),
-                'keys' => collect($data['permissions'])->mapWithKeys(fn ($key) => [$key => trans('server/users.permissions.' . $data['name'] . '_' . str($key)->replace('-', '_'))])->toArray(),
-            ];
+            $permissionName = $data['name'];
+
+            // Check if this is a custom extension permission with descriptions
+            $extensionData = collect(static::$extensionPermissions)->first(fn($ext) => $ext['name'] === $permissionName);
+
+            if ($extensionData && isset($extensionData['descriptions'])) {
+                // Use custom descriptions from extension
+                $permissions[$permissionName] = [
+                    'description' => $extensionData['descriptions']['desc'] ?? "Extension permissions for {$permissionName}",
+                    'keys' => collect($data['permissions'])->mapWithKeys(fn ($key) => [
+                        $key => $extensionData['descriptions'][$key] ?? ucfirst(str_replace('-', ' ', $key))
+                    ])->toArray(),
+                ];
+            } else {
+                // Use translation-based descriptions
+                $permissions[$permissionName] = [
+                    'description' => trans('server/users.permissions.' . $permissionName . '_desc'),
+                    'keys' => collect($data['permissions'])->mapWithKeys(fn ($key) => [$key => trans('server/users.permissions.' . $permissionName . '_' . str($key)->replace('-', '_'))])->toArray(),
+                ];
+            }
         }
 
         return collect($permissions);
