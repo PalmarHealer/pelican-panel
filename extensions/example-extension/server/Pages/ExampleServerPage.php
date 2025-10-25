@@ -38,6 +38,7 @@ class ExampleServerPage extends Page
     public function getHeading(): string
     {
         $server = Filament::getTenant();
+
         return 'Example Feature for ' . $server?->name;
     }
 

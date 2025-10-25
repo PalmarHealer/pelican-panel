@@ -4,9 +4,6 @@ namespace Extensions\ExampleExtension;
 
 use App\Extensions\Contracts\ExtensionInterface;
 use App\Extensions\ExtensionRegistry;
-use Extensions\ExampleExtension\Filament\Pages\ExampleAdminPage;
-use Extensions\ExampleExtension\Filament\Pages\ExampleAppPage;
-use Extensions\ExampleExtension\Filament\Pages\ExampleServerPage;
 use Filament\Facades\Filament;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Support\Facades\Event;
