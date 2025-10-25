@@ -25,21 +25,106 @@ class ListExtensions extends ListRecords
 
     protected static string $resource = ExtensionResource::class;
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('import')
+                ->label('Import Extension')
+                ->icon('tabler-upload')
+                ->color('success')
+                ->form([
+                    FileUpload::make('extension_zip')
+                        ->label('Extension ZIP File')
+                        ->acceptedFileTypes(['application/zip', 'application/x-zip-compressed'])
+                        ->required()
+                        ->directory('temp-uploads')
+                        ->visibility('private')
+                        ->maxSize(51200), // 50MB max
+                    Toggle::make('auto_enable')
+                        ->label('Enable after import')
+                        ->default(false)
+                        ->helperText('Automatically enable the extension after importing'),
+                ])
+                ->action(function (array $data) {
+                    $manager = app(ExtensionManager::class);
+
+                    // Get the uploaded file path
+                    $zipPath = storage_path('app/private/' . $data['extension_zip']);
+
+                    try {
+                        $result = $manager->importExtension($zipPath, $data['auto_enable'] ?? false);
+
+                        // Delete the uploaded zip file
+                        if (File::exists($zipPath)) {
+                            File::delete($zipPath);
+                        }
+
+                        if ($result['success']) {
+                            Notification::make()
+                                ->title($result['isUpdate'] ? 'Extension Updated' : 'Extension Imported')
+                                ->body($result['message'])
+                                ->success()
+                                ->send();
+
+                            // Trigger a rescan to pick up the new extension
+                            $this->scanForNewExtensions();
+                        } else {
+                            Notification::make()
+                                ->title('Import Failed')
+                                ->body($result['message'])
+                                ->danger()
+                                ->send();
+                        }
+                    } catch (\Exception $e) {
+                        // Clean up the zip file on error
+                        if (File::exists($zipPath)) {
+                            File::delete($zipPath);
+                        }
+
+                        Notification::make()
+                            ->title('Import Error')
+                            ->body('Failed to import extension: ' . $e->getMessage())
+                            ->danger()
+                            ->send();
+                    }
+                }),
+
+            Action::make('scan')
+                ->label('Scan for Extensions')
+                ->icon('tabler-refresh')
+                ->color('info')
+                ->action(function () {
+                    $this->scanForNewExtensions();
+                }),
+        ];
+    }
+
     public function table(Table $table): Table
     {
         return $table
             ->searchable(false)
             ->recordUrl(fn (Extension $record): string => ExtensionResource::getUrl('view', ['record' => $record], panel: 'admin'))
             ->columns([
-                TextColumn::make('identifier')
-                    ->label('ID')
-                    ->searchable()
-                    ->sortable(),
                 TextColumn::make('name')
                     ->label('Name')
                     ->sortable()
                     ->searchable()
-                    ->description(fn (Extension $record) => $record->version ?? 'Unknown version'),
+                    ->description(function (Extension $record) {
+                        $desc = $record->description ?? 'No description';
+
+                        return mb_strimwidth($desc, 0, 100, '...');
+                    }),
+                TextColumn::make('version')
+                    ->label('Version')
+                    ->sortable()
+                    ->badge(),
+                TextColumn::make('types')
+                    ->label('Type')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => collect($state ?? ['plugin'])
+                        ->map(fn ($type) => \App\Enums\ExtensionType::tryFrom($type)?->label() ?? ucfirst($type))
+                        ->join(', '))
+                    ->color(fn ($record) => $record->getTypeObjects()[0]?->color() ?? 'gray'),
                 TextColumn::make('author')
                     ->label('Author')
                     ->searchable()
@@ -58,7 +143,8 @@ class ListExtensions extends ListRecords
                     ->label('Last Updated')
                     ->visibleFrom('lg')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->recordActions([
                 Action::make('toggle')
@@ -110,6 +196,7 @@ class ListExtensions extends ListRecords
                                     ->body('The extension directory does not exist.')
                                     ->danger()
                                     ->send();
+
                                 return;
                             }
 
@@ -177,76 +264,6 @@ class ListExtensions extends ListRecords
             ->emptyStateIcon('tabler-puzzle')
             ->emptyStateDescription('No extensions found in the extensions directory.')
             ->emptyStateHeading('No Extensions')
-            ->headerActions([
-                Action::make('import')
-                    ->label('Import Extension')
-                    ->icon('tabler-upload')
-                    ->color('success')
-                    ->form([
-                        FileUpload::make('extension_zip')
-                            ->label('Extension ZIP File')
-                            ->acceptedFileTypes(['application/zip', 'application/x-zip-compressed'])
-                            ->required()
-                            ->directory('temp-uploads')
-                            ->visibility('private')
-                            ->maxSize(51200), // 50MB max
-                        Toggle::make('auto_enable')
-                            ->label('Enable after import')
-                            ->default(false)
-                            ->helperText('Automatically enable the extension after importing'),
-                    ])
-                    ->action(function (array $data) {
-                        $manager = app(ExtensionManager::class);
-
-                        // Get the uploaded file path
-                        $zipPath = storage_path('app/private/' . $data['extension_zip']);
-
-                        try {
-                            $result = $manager->importExtension($zipPath, $data['auto_enable'] ?? false);
-
-                            // Delete the uploaded zip file
-                            if (File::exists($zipPath)) {
-                                File::delete($zipPath);
-                            }
-
-                            if ($result['success']) {
-                                Notification::make()
-                                    ->title($result['isUpdate'] ? 'Extension Updated' : 'Extension Imported')
-                                    ->body($result['message'])
-                                    ->success()
-                                    ->send();
-
-                                // Trigger a rescan to pick up the new extension
-                                $this->scanForNewExtensions();
-                            } else {
-                                Notification::make()
-                                    ->title('Import Failed')
-                                    ->body($result['message'])
-                                    ->danger()
-                                    ->send();
-                            }
-                        } catch (\Exception $e) {
-                            // Clean up the zip file on error
-                            if (File::exists($zipPath)) {
-                                File::delete($zipPath);
-                            }
-
-                            Notification::make()
-                                ->title('Import Error')
-                                ->body('Failed to import extension: ' . $e->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
-
-                Action::make('scan')
-                    ->label('Scan for Extensions')
-                    ->icon('tabler-refresh')
-                    ->color('info')
-                    ->action(function () {
-                        $this->scanForNewExtensions();
-                    }),
-            ])
             ->toolbarActions([
                 BulkAction::make('enable')
                     ->label('Enable Selected')
@@ -336,6 +353,7 @@ class ListExtensions extends ListRecords
                 ->body('The extensions directory does not exist.')
                 ->warning()
                 ->send();
+
             return;
         }
 
@@ -361,15 +379,19 @@ class ListExtensions extends ListRecords
                 Extension::create([
                     'identifier' => $metadata['id'],
                     'name' => $metadata['name'] ?? $metadata['id'],
+                    'description' => $metadata['description'] ?? null,
                     'version' => $metadata['version'] ?? '1.0.0',
                     'author' => $metadata['author'] ?? null,
+                    'types' => $metadata['types'] ?? ['plugin'],
                     'enabled' => false,
                 ]);
                 $found++;
             } else {
-                // Update author if it's missing or changed
+                // Update metadata if it's missing or changed
                 $existing->update([
                     'author' => $metadata['author'] ?? $existing->author,
+                    'description' => $metadata['description'] ?? $existing->description,
+                    'types' => $metadata['types'] ?? $existing->types ?? ['plugin'],
                 ]);
             }
         }

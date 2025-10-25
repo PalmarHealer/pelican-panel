@@ -20,7 +20,7 @@ class ViewExtension extends Page
         return 'filament.admin.resources.extension-resource.pages.view-extension';
     }
 
-    public function mount(int | string $record): void
+    public function mount(int|string $record): void
     {
         $this->record = ExtensionResource::resolveRecordRouteBinding($record);
     }
@@ -29,12 +29,12 @@ class ViewExtension extends Page
     {
         return [
             Action::make('toggle')
-                ->label(fn() => $this->record->enabled ? 'Disable' : 'Enable')
-                ->icon(fn() => $this->record->enabled ? 'tabler-square-x' : 'tabler-square-check')
-                ->color(fn() => $this->record->enabled ? 'warning' : 'success')
+                ->label(fn () => $this->record->enabled ? 'Disable' : 'Enable')
+                ->icon(fn () => $this->record->enabled ? 'tabler-square-x' : 'tabler-square-check')
+                ->color(fn () => $this->record->enabled ? 'warning' : 'success')
                 ->requiresConfirmation()
-                ->modalHeading(fn() => $this->record->enabled ? 'Disable Extension' : 'Enable Extension')
-                ->modalDescription(fn() => $this->record->enabled
+                ->modalHeading(fn () => $this->record->enabled ? 'Disable Extension' : 'Enable Extension')
+                ->modalDescription(fn () => $this->record->enabled
                     ? 'Are you sure you want to disable this extension?'
                     : 'Are you sure you want to enable this extension?')
                 ->action(function () {
@@ -80,6 +80,7 @@ class ViewExtension extends Page
                                 ->body('The extension directory does not exist.')
                                 ->danger()
                                 ->send();
+
                             return;
                         }
 
@@ -125,7 +126,7 @@ class ViewExtension extends Page
                 ->requiresConfirmation()
                 ->modalHeading('Remove Extension')
                 ->modalDescription('This will completely remove the extension from your system, including all files, migrations, and database records. This action cannot be undone.')
-                ->visible(fn() => !$this->record->enabled)
+                ->visible(fn () => !$this->record->enabled)
                 ->action(function () {
                     $manager = app(ExtensionManager::class);
 
@@ -162,7 +163,13 @@ class ViewExtension extends Page
         // Get registrations from registry
         $registrations = $this->getExtensionRegistrations($registry);
 
-        return compact('metadata', 'registrations', 'extensionPath');
+        // Get language pack info if it's a language pack
+        $languageInfo = $this->getLanguagePackInfo($extensionPath);
+
+        // Get theme info if it's a theme
+        $themeInfo = $this->getThemeInfo($extensionPath);
+
+        return compact('metadata', 'registrations', 'extensionPath', 'languageInfo', 'themeInfo');
     }
 
     protected function getExtensionRegistrations($registry): array
@@ -210,6 +217,7 @@ class ViewExtension extends Page
                         $panels[] = ucfirst($panel);
                     }
                 }
+
                 return [
                     'id' => $itemId,
                     'label' => is_callable($config['label']) ? 'Dynamic Label' : $config['label'],
@@ -229,6 +237,7 @@ class ViewExtension extends Page
                         $panels[] = ucfirst($panel);
                     }
                 }
+
                 return [
                     'id' => $itemId,
                     'label' => is_callable($config['label']) ? 'Dynamic Label' : $config['label'],
@@ -263,13 +272,190 @@ class ViewExtension extends Page
             ->values()
             ->toArray();
 
+        // Get server page restrictions
+        $serverPageRestrictions = collect($registry->getServerPageRestrictions())
+            ->filter(fn ($data) => $data['extension_id'] === $extensionId)
+            ->map(function ($data, $pageClass) {
+                return [
+                    'page_class' => $pageClass,
+                    'page_name' => class_basename($pageClass),
+                    'egg_tags' => $data['egg_tags'],
+                ];
+            })
+            ->values()
+            ->toArray();
+
         // Manually registered components
         return array_merge($discovered, [
             'navigationItems' => $navigationItems,
             'userMenuItems' => $userMenuItems,
             'renderHooks' => $renderHooks,
-            'permissions' => collect($registry->getPermissions())->map(fn($perms, $model) => ['model' => $model, 'permissions' => $perms])->values()->toArray(),
+            'permissions' => collect($registry->getPermissions())->map(fn ($perms, $model) => ['model' => $model, 'permissions' => $perms])->values()->toArray(),
             'serverPermissions' => $serverPermissions,
+            'serverPageRestrictions' => $serverPageRestrictions,
         ]);
+    }
+
+    /**
+     * Get language pack information
+     */
+    protected function getLanguagePackInfo(string $extensionPath): array
+    {
+        $langPath = $extensionPath . '/lang';
+
+        if (!File::isDirectory($langPath)) {
+            return [];
+        }
+
+        $info = [
+            'new_languages' => [],
+            'overrides' => [],
+            'custom_namespaces' => [],
+        ];
+
+        $directories = File::directories($langPath);
+
+        foreach ($directories as $dir) {
+            $langCode = basename($dir);
+
+            // Check for overrides
+            if ($langCode === 'overrides') {
+                $overrideDirs = File::directories($dir);
+                foreach ($overrideDirs as $overrideDir) {
+                    $locale = basename($overrideDir);
+                    $files = File::files($overrideDir);
+                    $fileList = collect($files)->map(fn ($file) => $file->getFilename())->toArray();
+
+                    $info['overrides'][] = [
+                        'locale' => $locale,
+                        'locale_name' => $this->getLocaleName($locale),
+                        'files' => $fileList,
+                        'count' => count($fileList),
+                    ];
+                }
+            } else {
+                // Check if this is a new language or custom namespace
+                if (!File::isDirectory(base_path("lang/$langCode"))) {
+                    // New language
+                    $files = File::files($dir);
+                    $info['new_languages'][] = [
+                        'code' => $langCode,
+                        'name' => $this->getLocaleName($langCode),
+                        'files' => collect($files)->map(fn ($file) => $file->getFilename())->toArray(),
+                        'file_count' => count($files),
+                    ];
+                } else {
+                    // Custom namespace (extension-specific translations)
+                    $files = File::files($dir);
+                    $info['custom_namespaces'][] = [
+                        'locale' => $langCode,
+                        'locale_name' => $this->getLocaleName($langCode),
+                        'files' => collect($files)->map(fn ($file) => $file->getFilename())->toArray(),
+                        'namespace' => $this->record->identifier,
+                    ];
+                }
+            }
+        }
+
+        // Get language overrides from database
+        if ($this->record->language_overrides) {
+            $info['active_overrides'] = $this->record->language_overrides;
+        }
+
+        return $info;
+    }
+
+    /**
+     * Get theme information
+     */
+    protected function getThemeInfo(string $extensionPath): array
+    {
+        $publicPath = $extensionPath . '/public';
+
+        if (!File::isDirectory($publicPath)) {
+            return [];
+        }
+
+        $info = [
+            'css_files' => [],
+            'js_files' => [],
+            'assets' => [],
+        ];
+
+        $files = File::allFiles($publicPath);
+
+        foreach ($files as $file) {
+            $extension = $file->getExtension();
+            $relativePath = str_replace($publicPath . '/', '', $file->getPathname());
+
+            if ($extension === 'css') {
+                $info['css_files'][] = [
+                    'path' => $relativePath,
+                    'size' => $this->formatBytes($file->getSize()),
+                    'url' => asset("extensions/{$this->record->identifier}/$relativePath"),
+                ];
+            } elseif ($extension === 'js') {
+                $info['js_files'][] = [
+                    'path' => $relativePath,
+                    'size' => $this->formatBytes($file->getSize()),
+                    'url' => asset("extensions/{$this->record->identifier}/$relativePath"),
+                ];
+            } else {
+                $info['assets'][] = [
+                    'path' => $relativePath,
+                    'type' => $extension,
+                    'size' => $this->formatBytes($file->getSize()),
+                ];
+            }
+        }
+
+        return $info;
+    }
+
+    /**
+     * Get human-readable locale name
+     */
+    protected function getLocaleName(string $code): string
+    {
+        $locales = [
+            'en' => 'English',
+            'en-US' => 'English (US)',
+            'en-GB' => 'English (UK)',
+            'en-PIRATE' => 'Pirate English',
+            'de-DE' => 'German',
+            'fr-FR' => 'French',
+            'es-ES' => 'Spanish',
+            'it-IT' => 'Italian',
+            'pt-BR' => 'Portuguese (Brazil)',
+            'pt-PT' => 'Portuguese (Portugal)',
+            'nl-NL' => 'Dutch',
+            'pl-PL' => 'Polish',
+            'ru-RU' => 'Russian',
+            'ja-JP' => 'Japanese',
+            'zh-CN' => 'Chinese (Simplified)',
+            'zh-TW' => 'Chinese (Traditional)',
+            'ko-KR' => 'Korean',
+            'ar-SA' => 'Arabic',
+        ];
+
+        return $locales[$code] ?? $code;
+    }
+
+    /**
+     * Format bytes to human-readable size
+     */
+    protected function formatBytes(int $bytes): string
+    {
+        if ($bytes >= 1073741824) {
+            return number_format($bytes / 1073741824, 2) . ' GB';
+        }
+        if ($bytes >= 1048576) {
+            return number_format($bytes / 1048576, 2) . ' MB';
+        }
+        if ($bytes >= 1024) {
+            return number_format($bytes / 1024, 2) . ' KB';
+        }
+
+        return $bytes . ' bytes';
     }
 }

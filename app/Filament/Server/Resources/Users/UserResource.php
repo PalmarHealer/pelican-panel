@@ -91,10 +91,10 @@ class UserResource extends Resource
         $tabs = [];
         $permissionsArray = [];
 
-        // Get permission data with descriptions
+        // Get permission data with descriptions (filtered by server egg tags)
         $allPermissions = Permission::permissions();
 
-        foreach (Permission::permissionData() as $data) {
+        foreach (Permission::permissionData($server) as $data) {
             $options = [];
             $descriptions = [];
             $permissionName = $data['name'];

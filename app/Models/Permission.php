@@ -153,13 +153,14 @@ class Permission extends Model implements Validatable
     /**
      * All the permissions available on the system.
      *
+     * @param  \App\Models\Server|null  $server  Optional server to filter permissions by egg tags
      * @return array<int, array{
      *      name: string,
      *      icon: string,
      *      permissions: string[]
      *  }>
      */
-    public static function permissionData(): array
+    public static function permissionData(?\App\Models\Server $server = null): array
     {
         $basePermissions = [
             [
@@ -215,7 +216,26 @@ class Permission extends Model implements Validatable
         ];
 
         // Merge in dynamically registered extension permissions
+        // Filter by egg tags if server is provided
         foreach (static::$extensionPermissions as $extensionId => $permissionData) {
+            // Check if extension permissions are restricted to specific egg tags
+            if ($server && isset($permissionData['egg_tags']) && !empty($permissionData['egg_tags'])) {
+                $serverEggTags = $server->egg->tags ?? [];
+                $hasMatchingTag = false;
+
+                foreach ($permissionData['egg_tags'] as $requiredTag) {
+                    if (in_array($requiredTag, $serverEggTags)) {
+                        $hasMatchingTag = true;
+                        break;
+                    }
+                }
+
+                // Skip this permission if no matching tag
+                if (!$hasMatchingTag) {
+                    continue;
+                }
+            }
+
             $basePermissions[] = [
                 'name' => $permissionData['name'],
                 'icon' => $permissionData['icon'] ?? 'tabler-puzzle',
@@ -244,14 +264,14 @@ class Permission extends Model implements Validatable
             $permissionName = $data['name'];
 
             // Check if this is a custom extension permission with descriptions
-            $extensionData = collect(static::$extensionPermissions)->first(fn($ext) => $ext['name'] === $permissionName);
+            $extensionData = collect(static::$extensionPermissions)->first(fn ($ext) => $ext['name'] === $permissionName);
 
             if ($extensionData && isset($extensionData['descriptions'])) {
                 // Use custom descriptions from extension
                 $permissions[$permissionName] = [
                     'description' => $extensionData['descriptions']['desc'] ?? "Extension permissions for {$permissionName}",
                     'keys' => collect($data['permissions'])->mapWithKeys(fn ($key) => [
-                        $key => $extensionData['descriptions'][$key] ?? ucfirst(str_replace('-', ' ', $key))
+                        $key => $extensionData['descriptions'][$key] ?? ucfirst(str_replace('-', ' ', $key)),
                     ])->toArray(),
                 ];
             } else {

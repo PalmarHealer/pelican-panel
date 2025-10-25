@@ -3,6 +3,8 @@
         $data = $this->getViewData();
         $metadata = $data['metadata'];
         $registrations = $data['registrations'];
+        $languageInfo = $data['languageInfo'] ?? [];
+        $themeInfo = $data['themeInfo'] ?? [];
     @endphp
 
     <div class="space-y-6">
@@ -60,13 +62,256 @@
             </div>
         </x-filament::section>
 
+        {{-- Language Pack Information --}}
+        @if(!empty($languageInfo))
+        <x-filament::section collapsible>
+            <x-slot name="heading">
+                <div class="flex items-center gap-2">
+                    <x-filament::icon icon="tabler-language" class="w-5 h-5"/>
+                    Language Pack Details
+                </div>
+            </x-slot>
+            <x-slot name="description">
+                Languages, overrides, and custom translations provided by this extension
+            </x-slot>
+
+            <div class="space-y-6">
+                {{-- New Languages --}}
+                @if(!empty($languageInfo['new_languages']))
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <x-filament::icon icon="tabler-world-plus" class="w-5 h-5 text-success-500"/>
+                        <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">New Languages Added</div>
+                        <x-filament::badge color="success" size="sm">
+                            {{ count($languageInfo['new_languages']) }}
+                        </x-filament::badge>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        @foreach($languageInfo['new_languages'] as $lang)
+                            <div class="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $lang['name'] }}</div>
+                                    <x-filament::badge color="gray" size="xs">{{ $lang['code'] }}</x-filament::badge>
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ $lang['file_count'] }} translation file{{ $lang['file_count'] !== 1 ? 's' : '' }}
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    @foreach($lang['files'] as $file)
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                                            {{ $file }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
+                {{-- Language Overrides --}}
+                @if(!empty($languageInfo['overrides']))
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <x-filament::icon icon="tabler-file-text" class="w-5 h-5 text-warning-500"/>
+                        <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">Language Overrides</div>
+                        <x-filament::badge color="warning" size="sm">
+                            {{ count($languageInfo['overrides']) }}
+                        </x-filament::badge>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        @foreach($languageInfo['overrides'] as $override)
+                            <div class="p-3 rounded-lg border border-warning-200 dark:border-warning-900/50 bg-warning-50 dark:bg-warning-900/20">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $override['locale_name'] }}</div>
+                                    <x-filament::badge color="warning" size="xs">{{ $override['locale'] }}</x-filament::badge>
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    Overriding {{ $override['count'] }} file{{ $override['count'] !== 1 ? 's' : '' }}
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    @foreach($override['files'] as $file)
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-warning-200 dark:bg-warning-800 text-warning-900 dark:text-warning-100">
+                                            {{ $file }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
+                {{-- Custom Namespaces --}}
+                @if(!empty($languageInfo['custom_namespaces']))
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <x-filament::icon icon="tabler-code" class="w-5 h-5 text-info-500"/>
+                        <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">Custom Translation Namespaces</div>
+                        <x-filament::badge color="info" size="sm">
+                            {{ count($languageInfo['custom_namespaces']) }}
+                        </x-filament::badge>
+                    </div>
+                    <div class="space-y-3">
+                        @foreach($languageInfo['custom_namespaces'] as $namespace)
+                            <div class="p-3 rounded-lg border border-info-200 dark:border-info-900/50 bg-info-50 dark:bg-info-900/20">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $namespace['locale_name'] }}</div>
+                                    <x-filament::badge color="info" size="xs">{{ $namespace['locale'] }}</x-filament::badge>
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                    Namespace: <code class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100">{{ $namespace['namespace'] }}</code>
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    @foreach($namespace['files'] as $file)
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-info-200 dark:bg-info-800 text-info-900 dark:text-info-100">
+                                            {{ $file }}
+                                        </span>
+                                    @endforeach
+                                </div>
+                                <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                    Usage: <code class="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100">trans('{{ $namespace['namespace'] }}::file.key')</code>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
+                {{-- Active Overrides from Database --}}
+                @if(!empty($languageInfo['active_overrides']))
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <x-filament::icon icon="tabler-database" class="w-5 h-5 text-primary-500"/>
+                        <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">Active Override Tracking</div>
+                        <x-filament::badge color="primary" size="sm">
+                            {{ count($languageInfo['active_overrides']) }}
+                        </x-filament::badge>
+                    </div>
+                    <div class="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                        <div class="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                            Files currently overridden by this extension:
+                        </div>
+                        <div class="flex flex-wrap gap-1">
+                            @foreach($languageInfo['active_overrides'] as $override)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100">
+                                    {{ $override }}
+                                </span>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+                @endif
+            </div>
+        </x-filament::section>
+        @endif
+
+        {{-- Theme Information --}}
+        @if(!empty($themeInfo))
+        <x-filament::section collapsible>
+            <x-slot name="heading">
+                <div class="flex items-center gap-2">
+                    <x-filament::icon icon="tabler-palette" class="w-5 h-5"/>
+                    Theme Assets
+                </div>
+            </x-slot>
+            <x-slot name="description">
+                CSS, JavaScript, and other assets provided by this theme extension
+            </x-slot>
+
+            <div class="space-y-6">
+                {{-- CSS Files --}}
+                @if(!empty($themeInfo['css_files']))
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <x-filament::icon icon="tabler-file-type-css" class="w-5 h-5 text-blue-500"/>
+                        <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">CSS Files</div>
+                        <x-filament::badge color="info" size="sm">
+                            {{ count($themeInfo['css_files']) }}
+                        </x-filament::badge>
+                    </div>
+                    <div class="space-y-2">
+                        @foreach($themeInfo['css_files'] as $css)
+                            <div class="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                                <div class="flex-1">
+                                    <div class="text-sm font-mono text-gray-900 dark:text-gray-100">{{ $css['path'] }}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Size: {{ $css['size'] }}
+                                    </div>
+                                </div>
+                                <a href="{{ $css['url'] }}" target="_blank" class="ml-4 shrink-0">
+                                    <x-filament::icon icon="tabler-external-link" class="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"/>
+                                </a>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
+                {{-- JavaScript Files --}}
+                @if(!empty($themeInfo['js_files']))
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <x-filament::icon icon="tabler-file-type-js" class="w-5 h-5 text-yellow-500"/>
+                        <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">JavaScript Files</div>
+                        <x-filament::badge color="warning" size="sm">
+                            {{ count($themeInfo['js_files']) }}
+                        </x-filament::badge>
+                    </div>
+                    <div class="space-y-2">
+                        @foreach($themeInfo['js_files'] as $js)
+                            <div class="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                                <div class="flex-1">
+                                    <div class="text-sm font-mono text-gray-900 dark:text-gray-100">{{ $js['path'] }}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Size: {{ $js['size'] }}
+                                    </div>
+                                </div>
+                                <a href="{{ $js['url'] }}" target="_blank" class="ml-4 shrink-0">
+                                    <x-filament::icon icon="tabler-external-link" class="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"/>
+                                </a>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+
+                {{-- Other Assets --}}
+                @if(!empty($themeInfo['assets']))
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <x-filament::icon icon="tabler-file" class="w-5 h-5 text-gray-500"/>
+                        <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">Other Assets</div>
+                        <x-filament::badge color="gray" size="sm">
+                            {{ count($themeInfo['assets']) }}
+                        </x-filament::badge>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        @foreach($themeInfo['assets'] as $asset)
+                            <div class="flex items-center justify-between p-2 rounded border border-gray-200 dark:border-gray-700 text-xs">
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-mono text-gray-900 dark:text-gray-100 truncate">{{ $asset['path'] }}</div>
+                                    <div class="text-gray-500 dark:text-gray-400">{{ $asset['size'] }}</div>
+                                </div>
+                                <x-filament::badge color="gray" size="xs" class="ml-2 shrink-0">
+                                    {{ $asset['type'] }}
+                                </x-filament::badge>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+            </div>
+        </x-filament::section>
+        @endif
+
         {{-- Filament Components --}}
         <x-filament::section>
             <x-slot name="heading">
                 Filament Components
             </x-slot>
             <x-slot name="description">
-                Pages, Resources, and Widgets discovered via symlinks
+                Pages and Resources discovered via symlinks
             </x-slot>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -202,6 +447,42 @@
                         <x-filament::badge color="warning" size="sm">
                             {{ $hook['count'] }} callback{{ $hook['count'] > 1 ? 's' : '' }}
                         </x-filament::badge>
+                    </div>
+                @endforeach
+            </div>
+        </x-filament::section>
+        @endif
+
+        {{-- Server Page Restrictions --}}
+        @if($record->enabled && count($registrations['serverPageRestrictions'] ?? []) > 0)
+        <x-filament::section collapsible>
+            <x-slot name="heading">
+                <div class="flex items-center gap-2">
+                    <x-filament::icon icon="tabler-egg" class="w-5 h-5"/>
+                    Server Page Restrictions
+                </div>
+            </x-slot>
+            <x-slot name="description">
+                Egg tag restrictions for server panel pages
+            </x-slot>
+
+            <div class="space-y-3">
+                @foreach($registrations['serverPageRestrictions'] as $restriction)
+                    <div class="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $restriction['page_name'] }}</div>
+                        </div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono">
+                            {{ $restriction['page_class'] }}
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-600 dark:text-gray-400">Allowed for egg tags:</span>
+                            <div class="flex flex-wrap gap-1">
+                                @foreach($restriction['egg_tags'] as $tag)
+                                    <x-filament::badge color="primary" size="xs">{{ $tag }}</x-filament::badge>
+                                @endforeach
+                            </div>
+                        </div>
                     </div>
                 @endforeach
             </div>

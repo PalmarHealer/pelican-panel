@@ -11,9 +11,13 @@ use Illuminate\Support\Facades\File;
 class ExtensionManager
 {
     protected Collection $extensions;
+
     protected ExtensionRegistry $registry;
+
     protected array $enabledExtensions = [];
+
     protected bool $discovered = false;
+
     protected bool $registered = false;
 
     public function __construct(ExtensionRegistry $registry)
@@ -38,6 +42,7 @@ class ExtensionManager
         if (!File::isDirectory($extensionPath)) {
             File::makeDirectory($extensionPath, 0755, true);
             $this->discovered = true;
+
             return;
         }
 
@@ -87,7 +92,7 @@ class ExtensionManager
         $this->registerExtensionAutoloader($path, $extensionId);
 
         // Load extension controller
-        $controllerClass = "Extensions\\" . str($extensionId)->studly()->toString() . "\\" . ($metadata['controller'] ?? 'ExtensionController');
+        $controllerClass = 'Extensions\\' . str($extensionId)->studly()->toString() . '\\' . ($metadata['controller'] ?? 'ExtensionController');
 
         if (!class_exists($controllerClass)) {
             // Auto-include the controller file
@@ -127,7 +132,11 @@ class ExtensionManager
             return;
         }
 
-        $this->extensions->each(function ($extension) {
+        $this->extensions->each(function ($extension, $extensionId) {
+            // Auto-register egg restrictions from metadata
+            $this->registerEggRestrictions($extensionId, $extension);
+
+            // Call extension's register method
             $extension['controller']->register($this->registry);
         });
 
@@ -135,11 +144,53 @@ class ExtensionManager
     }
 
     /**
+     * Auto-register egg restrictions for server pages from extension.json metadata.
+     */
+    protected function registerEggRestrictions(string $extensionId, array $extension): void
+    {
+        $metadata = $extension['metadata'];
+        $extensionPath = $extension['path'];
+
+        // Check if extension has egg restrictions defined in metadata
+        if (!isset($metadata['egg_restrictions'])) {
+            return;
+        }
+
+        $restrictions = $metadata['egg_restrictions'];
+        $studlyId = str($extensionId)->studly()->toString();
+
+        // Register restrictions for each specified page
+        foreach ($restrictions as $pageRelativePath => $eggTags) {
+            // Build the full page class name
+            // Support format: "server/Pages/PageName" => ["tag1", "tag2"]
+            $parts = explode('/', $pageRelativePath);
+
+            if (count($parts) >= 3) {
+                $panel = ucfirst($parts[0]); // e.g., "Server"
+                $type = $parts[1]; // e.g., "Pages"
+                $className = str_replace('.php', '', end($parts));
+
+                $fullClassName = "App\\Filament\\{$panel}\\{$type}\\Extensions\\{$studlyId}\\{$className}";
+
+                if (class_exists($fullClassName)) {
+                    $this->registry->serverPageRestriction($extensionId, $fullClassName, $eggTags);
+                }
+            }
+        }
+    }
+
+    /**
      * Boot all enabled extensions.
      */
     public function bootAll(): void
     {
-        $this->extensions->each(function ($extension) {
+        $this->extensions->each(function ($extension, $extensionId) {
+            // Load language pack translations if extension has lang directory
+            $langPath = $extension['path'] . '/lang';
+            if (File::isDirectory($langPath)) {
+                $this->loadLanguagePackTranslations($extensionId, $langPath);
+            }
+
             $extension['controller']->boot();
         });
     }
@@ -158,13 +209,13 @@ class ExtensionManager
         $metadataFile = $extensionPath . '/extension.json';
 
         if (!File::exists($metadataFile)) {
-            throw new \Exception("Extension metadata file not found: extension.json");
+            throw new \Exception('Extension metadata file not found: extension.json');
         }
 
         $metadata = json_decode(File::get($metadataFile), true);
 
         if (!$metadata) {
-            throw new \Exception("Invalid extension metadata file");
+            throw new \Exception('Invalid extension metadata file');
         }
 
         // Create/update extension in database
@@ -172,8 +223,10 @@ class ExtensionManager
             ['identifier' => $extensionId],
             [
                 'name' => $metadata['name'] ?? $extensionId,
+                'description' => $metadata['description'] ?? null,
                 'version' => $metadata['version'] ?? '1.0.0',
                 'author' => $metadata['author'] ?? null,
+                'types' => $metadata['types'] ?? ['plugin'],
                 'enabled' => true,
             ]
         );
@@ -192,6 +245,40 @@ class ExtensionManager
 
         // Publish Filament components (symlink to app/Filament)
         $this->publishFilamentComponents($extensionId);
+
+        // Publish themes and language packs based on types
+        $types = $metadata['types'] ?? ['plugin'];
+        if (in_array('theme', $types)) {
+            $this->publishTheme($extensionId);
+        }
+        if (in_array('language-pack', $types)) {
+            $result = $this->publishLanguagePack($extensionId);
+
+            // Check for conflicts
+            if (!$result['success'] && !empty($result['conflicts'])) {
+                // Rollback: disable the extension
+                $extension->update(['enabled' => false]);
+
+                // Clean up what we've published so far
+                $this->unpublishAssets($extensionId);
+                $this->unpublishViews($extensionId);
+                $this->unpublishFilamentComponents($extensionId);
+                $this->unpublishConfig($extensionId);
+                if (in_array('theme', $types)) {
+                    $this->unpublishTheme($extensionId);
+                }
+
+                // Build conflict message
+                $conflictMessages = collect($result['conflicts'])->map(function ($conflict) {
+                    return "'{$conflict['file']}' is already overridden by '{$conflict['blocking_extension']}'";
+                })->join(', ');
+
+                throw new \Exception(
+                    "Language pack conflict detected: $conflictMessages. " .
+                    'Please disable the conflicting extension(s) first before enabling this extension.'
+                );
+            }
+        }
 
         // Load and register extension
         $this->loadExtension($extensionPath);
@@ -228,6 +315,10 @@ class ExtensionManager
 
         // Remove published config
         $this->unpublishConfig($extensionId);
+
+        // Unpublish themes and language packs
+        $this->unpublishTheme($extensionId);
+        $this->unpublishLanguagePack($extensionId);
     }
 
     /**
@@ -261,8 +352,8 @@ class ExtensionManager
     /**
      * Import an extension from a .zip file.
      *
-     * @param string $zipPath Path to the .zip file
-     * @param bool $autoEnable Whether to enable the extension after importing
+     * @param  string  $zipPath  Path to the .zip file
+     * @param  bool  $autoEnable  Whether to enable the extension after importing
      * @return array Returns ['success' => bool, 'message' => string, 'isUpdate' => bool, 'extensionId' => string|null]
      */
     public function importExtension(string $zipPath, bool $autoEnable = false): array
@@ -304,6 +395,7 @@ class ExtensionManager
 
             if (!$extensionJsonPath) {
                 \File::deleteDirectory($tempDir);
+
                 return ['success' => false, 'message' => 'extension.json not found in zip file', 'isUpdate' => false, 'extensionId' => null];
             }
 
@@ -311,6 +403,7 @@ class ExtensionManager
             $metadata = json_decode(\File::get($extensionJsonPath), true);
             if (!$metadata || !isset($metadata['id'])) {
                 \File::deleteDirectory($tempDir);
+
                 return ['success' => false, 'message' => 'Invalid extension.json format', 'isUpdate' => false, 'extensionId' => null];
             }
 
@@ -650,6 +743,7 @@ class ExtensionManager
 
                         if (File::exists($file)) {
                             require_once $file;
+
                             return;
                         }
                     }
@@ -678,8 +772,8 @@ class ExtensionManager
      * Register extension components (pages, resources, widgets) for a specific panel.
      * This method should be called from panel providers.
      *
-     * @param \Filament\Panel $panel The panel instance
-     * @param string $panelId The panel ID ('admin', 'server', 'app')
+     * @param  \Filament\Panel  $panel  The panel instance
+     * @param  string  $panelId  The panel ID ('admin', 'server', 'app')
      */
     public function registerPanelComponents(\Filament\Panel $panel, string $panelId): void
     {
@@ -689,7 +783,7 @@ class ExtensionManager
             $panelClass = str($panelId)->studly()->toString();
 
             // Register pages
-            $pagesDir = "$extensionPath/" . strtolower($panelId) . "/Pages";
+            $pagesDir = "$extensionPath/" . strtolower($panelId) . '/Pages';
             if (File::isDirectory($pagesDir)) {
                 foreach (File::allFiles($pagesDir) as $file) {
                     if ($file->getExtension() === 'php') {
@@ -703,7 +797,7 @@ class ExtensionManager
             }
 
             // Register resources
-            $resourcesDir = "$extensionPath/" . strtolower($panelId) . "/Resources";
+            $resourcesDir = "$extensionPath/" . strtolower($panelId) . '/Resources';
             if (File::isDirectory($resourcesDir)) {
                 foreach (File::allFiles($resourcesDir) as $file) {
                     if ($file->getExtension() === 'php' && str_ends_with($file->getFilename(), 'Resource.php')) {
@@ -717,7 +811,7 @@ class ExtensionManager
             }
 
             // Register widgets
-            $widgetsDir = "$extensionPath/" . strtolower($panelId) . "/Widgets";
+            $widgetsDir = "$extensionPath/" . strtolower($panelId) . '/Widgets';
             if (File::isDirectory($widgetsDir)) {
                 foreach (File::allFiles($widgetsDir) as $file) {
                     if ($file->getExtension() === 'php') {
@@ -735,7 +829,7 @@ class ExtensionManager
     /**
      * Get user menu items for a specific panel.
      *
-     * @param string $panelId The panel ID ('admin', 'server', 'app')
+     * @param  string  $panelId  The panel ID ('admin', 'server', 'app')
      * @return array Array of user menu items for this panel
      */
     public function getUserMenuItemsForPanel(string $panelId): array
@@ -751,13 +845,13 @@ class ExtensionManager
 
             // Build the action
             $action = \Filament\Actions\Action::make($itemId)
-                ->label(is_callable($config['label']) ? $config['label'] : fn() => $config['label'])
-                ->url(is_callable($config['url']) ? $config['url'] : fn() => $config['url'])
+                ->label(is_callable($config['label']) ? $config['label'] : fn () => $config['label'])
+                ->url(is_callable($config['url']) ? $config['url'] : fn () => $config['url'])
                 ->icon($config['icon'] ?? 'tabler-puzzle');
 
             // Add visible if specified
             if (isset($config['visible'])) {
-                $action->visible(is_callable($config['visible']) ? $config['visible'] : fn() => $config['visible']);
+                $action->visible(is_callable($config['visible']) ? $config['visible'] : fn () => $config['visible']);
             }
 
             $userMenuItems[$itemId] = $action;
@@ -769,7 +863,7 @@ class ExtensionManager
     /**
      * Get navigation items for a specific panel.
      *
-     * @param string $panelId The panel ID ('admin', 'server', 'app')
+     * @param  string  $panelId  The panel ID ('admin', 'server', 'app')
      * @return array Array of navigation items for this panel
      */
     public function getNavigationItemsForPanel(string $panelId): array
@@ -785,24 +879,340 @@ class ExtensionManager
 
             // Build the navigation item
             $navItem = \Filament\Navigation\NavigationItem::make($itemId)
-                ->label(is_callable($config['label']) ? $config['label'] : fn() => $config['label'])
-                ->url(is_callable($config['url']) ? $config['url'] : fn() => $config['url'])
+                ->label(is_callable($config['label']) ? $config['label'] : fn () => $config['label'])
+                ->url(is_callable($config['url']) ? $config['url'] : fn () => $config['url'])
                 ->icon($config['icon'] ?? 'tabler-puzzle')
                 ->sort($config['sort'] ?? 999);
 
             // Add group for admin panel
             if ($panelId === 'admin' && isset($config['group'])) {
-                $navItem->group(is_callable($config['group']) ? $config['group'] : fn() => $config['group']);
+                $navItem->group(is_callable($config['group']) ? $config['group'] : fn () => $config['group']);
             }
 
             // Add visible if specified
             if (isset($config['visible'])) {
-                $navItem->visible(is_callable($config['visible']) ? $config['visible'] : fn() => $config['visible']);
+                $navItem->visible(is_callable($config['visible']) ? $config['visible'] : fn () => $config['visible']);
             }
 
             $navigationItems[] = $navItem;
         }
 
         return $navigationItems;
+    }
+
+    /**
+     * Publish theme files (copy CSS to resources/css/themes/).
+     */
+    protected function publishTheme(string $extensionId): void
+    {
+        $sourcePath = base_path("extensions/$extensionId/theme");
+        $targetPath = resource_path("css/themes/$extensionId");
+
+        if (!File::isDirectory($sourcePath)) {
+            return;
+        }
+
+        File::ensureDirectoryExists(dirname($targetPath));
+
+        // Remove existing directory if it exists
+        if (File::exists($targetPath)) {
+            if (is_link($targetPath)) {
+                File::delete($targetPath);
+            } else {
+                File::deleteDirectory($targetPath);
+            }
+        }
+
+        // Create symlink
+        File::link($sourcePath, $targetPath);
+    }
+
+    /**
+     * Unpublish theme files.
+     */
+    protected function unpublishTheme(string $extensionId): void
+    {
+        $targetPath = resource_path("css/themes/$extensionId");
+
+        if (File::exists($targetPath)) {
+            if (is_link($targetPath)) {
+                File::delete($targetPath);
+            } elseif (File::isDirectory($targetPath)) {
+                File::deleteDirectory($targetPath);
+            }
+        }
+    }
+
+    /**
+     * Publish language pack (symlink to resources/lang/).
+     * Supports three modes:
+     * 1. New language: extensions/ext/lang/fr/ -> lang/fr/ (new complete language)
+     * 2. Overrides: extensions/ext/lang/overrides/en/ -> merges with lang/en/
+     * 3. Extension namespace: extensions/ext/lang/en/ -> accessible via trans('ext::file.key')
+     *
+     * @return array Returns ['success' => bool, 'conflicts' => array]
+     */
+    protected function publishLanguagePack(string $extensionId): array
+    {
+        $sourcePath = base_path("extensions/$extensionId/lang");
+
+        if (!File::isDirectory($sourcePath)) {
+            return ['success' => true, 'conflicts' => []];
+        }
+
+        $allOverrides = [];
+        $allConflicts = [];
+
+        // Process new languages and overrides
+        $directories = File::directories($sourcePath);
+
+        foreach ($directories as $dir) {
+            $langCode = basename($dir);
+
+            // Handle overrides directory
+            if ($langCode === 'overrides') {
+                $result = $this->publishLanguageOverrides($extensionId, $dir);
+                $allOverrides = array_merge($allOverrides, $result['overrides']);
+                $allConflicts = array_merge($allConflicts, $result['conflicts']);
+
+                continue;
+            }
+
+            // Handle new language (e.g., extensions/ext/lang/fr/ -> lang/fr/)
+            // This creates a complete new language
+            if (!File::isDirectory(base_path("lang/$langCode"))) {
+                $targetPath = base_path("lang/$langCode");
+                File::ensureDirectoryExists(dirname($targetPath));
+
+                // Remove existing if present
+                if (File::exists($targetPath)) {
+                    if (is_link($targetPath)) {
+                        File::delete($targetPath);
+                    } else {
+                        File::deleteDirectory($targetPath);
+                    }
+                }
+
+                // Create symlink for new language
+                File::link($dir, $targetPath);
+            }
+        }
+
+        // Save override tracking to database
+        if (!empty($allOverrides)) {
+            $extension = Extension::where('identifier', $extensionId)->first();
+            if ($extension) {
+                $extension->update(['language_overrides' => $allOverrides]);
+            }
+        }
+
+        // Register namespace for extension translations (e.g., trans('myext::messages.welcome'))
+        $this->loadLanguagePackTranslations($extensionId, $sourcePath);
+
+        return [
+            'success' => empty($allConflicts),
+            'conflicts' => $allConflicts,
+        ];
+    }
+
+    /**
+     * Publish language overrides with conflict detection.
+     * Copies override files to lang/ directories and merges with existing translations.
+     *
+     * @return array Returns ['success' => bool, 'conflicts' => array, 'overrides' => array]
+     */
+    protected function publishLanguageOverrides(string $extensionId, string $overridesPath): array
+    {
+        $overrideLangDirs = File::directories($overridesPath);
+        $conflicts = [];
+        $successfulOverrides = [];
+
+        foreach ($overrideLangDirs as $langDir) {
+            $langCode = basename($langDir);
+            $targetLangDir = base_path("lang/$langCode");
+
+            // Skip if target language doesn't exist
+            if (!File::isDirectory($targetLangDir)) {
+                continue;
+            }
+
+            // Check each override file for conflicts
+            $overrideFiles = File::files($langDir);
+            foreach ($overrideFiles as $file) {
+                $filename = $file->getFilename();
+                $targetFile = "$targetLangDir/$filename";
+                $overrideKey = "$langCode/$filename";
+
+                // Check if another extension has already overridden this file
+                $blockingExtension = $this->findExtensionOverridingFile($overrideKey, $extensionId);
+
+                if ($blockingExtension) {
+                    $conflicts[] = [
+                        'file' => $overrideKey,
+                        'blocking_extension' => $blockingExtension->name,
+                        'blocking_extension_id' => $blockingExtension->identifier,
+                    ];
+
+                    continue; // Skip this file due to conflict
+                }
+
+                // No conflict, proceed with override
+                if (File::exists($targetFile)) {
+                    $backupFile = "$targetFile.backup-before-$extensionId";
+
+                    // Only create backup if this is the first override (no backup exists)
+                    if (!File::exists($backupFile)) {
+                        File::copy($targetFile, $backupFile);
+                    }
+
+                    // Merge translations
+                    $original = require $targetFile;
+                    $override = require $file->getPathname();
+                    $merged = array_replace_recursive($original, $override);
+
+                    // Write merged translations
+                    $export = "<?php\n\nreturn " . var_export($merged, true) . ";\n";
+                    File::put($targetFile, $export);
+
+                    $successfulOverrides[] = $overrideKey;
+                } else {
+                    // No original file, just copy the override
+                    File::copy($file->getPathname(), $targetFile);
+                    $successfulOverrides[] = $overrideKey;
+                }
+            }
+        }
+
+        return [
+            'success' => empty($conflicts),
+            'conflicts' => $conflicts,
+            'overrides' => $successfulOverrides,
+        ];
+    }
+
+    /**
+     * Find which extension (if any) has overridden a specific language file.
+     *
+     * @param  string  $fileKey  Format: "locale/filename.php" (e.g., "en/activity.php")
+     * @param  string  $excludeExtensionId  Extension to exclude from search
+     */
+    protected function findExtensionOverridingFile(string $fileKey, ?string $excludeExtensionId = null): ?Extension
+    {
+        $query = Extension::where('enabled', true)
+            ->whereNotNull('language_overrides');
+
+        if ($excludeExtensionId) {
+            $query->where('identifier', '!=', $excludeExtensionId);
+        }
+
+        $extensions = $query->get();
+
+        foreach ($extensions as $extension) {
+            $overrides = $extension->language_overrides ?? [];
+            if (in_array($fileKey, $overrides)) {
+                return $extension;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Load language pack translations with extension namespace.
+     * Allows accessing translations via trans('extensionId::file.key')
+     */
+    protected function loadLanguagePackTranslations(string $extensionId, string $sourcePath): void
+    {
+        // Register the namespace with Laravel's translator
+        app('translator')->addNamespace($extensionId, $sourcePath);
+    }
+
+    /**
+     * Unpublish language pack.
+     */
+    protected function unpublishLanguagePack(string $extensionId): void
+    {
+        $sourcePath = base_path("extensions/$extensionId/lang");
+
+        if (!File::isDirectory($sourcePath)) {
+            return;
+        }
+
+        // Remove new languages created by this extension
+        $directories = File::directories($sourcePath);
+
+        foreach ($directories as $dir) {
+            $langCode = basename($dir);
+
+            // Skip overrides directory
+            if ($langCode === 'overrides') {
+                $this->unpublishLanguageOverrides($extensionId, $dir);
+
+                continue;
+            }
+
+            // Remove symlinked language if it's a symlink
+            $targetPath = base_path("lang/$langCode");
+            if (File::exists($targetPath) && is_link($targetPath)) {
+                File::delete($targetPath);
+            }
+        }
+    }
+
+    /**
+     * Unpublish language overrides (restore backups).
+     * Only restores files that THIS extension overrode (selective restoration).
+     */
+    protected function unpublishLanguageOverrides(string $extensionId, string $overridesPath): void
+    {
+        // Get the list of files this extension overrode
+        $extension = Extension::where('identifier', $extensionId)->first();
+        $trackedOverrides = $extension?->language_overrides ?? [];
+
+        if (empty($trackedOverrides)) {
+            return; // No overrides to restore
+        }
+
+        $overrideLangDirs = File::directories($overridesPath);
+
+        foreach ($overrideLangDirs as $langDir) {
+            $langCode = basename($langDir);
+            $targetLangDir = base_path("lang/$langCode");
+
+            if (!File::isDirectory($targetLangDir)) {
+                continue;
+            }
+
+            // Restore only the files that this extension actually overrode
+            $overrideFiles = File::files($langDir);
+            foreach ($overrideFiles as $file) {
+                $filename = $file->getFilename();
+                $overrideKey = "$langCode/$filename";
+
+                // Only restore if this extension owns this override
+                if (!in_array($overrideKey, $trackedOverrides)) {
+                    continue;
+                }
+
+                $targetFile = "$targetLangDir/$filename";
+                $backupFile = "$targetFile.backup-before-$extensionId";
+
+                if (File::exists($backupFile)) {
+                    // Restore original from backup
+                    File::copy($backupFile, $targetFile);
+                    File::delete($backupFile);
+                } else {
+                    // No backup exists, remove the file if it was added by extension
+                    if (File::exists($targetFile)) {
+                        File::delete($targetFile);
+                    }
+                }
+            }
+        }
+
+        // Clear the override tracking from database
+        if ($extension) {
+            $extension->update(['language_overrides' => null]);
+        }
     }
 }

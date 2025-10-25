@@ -2,7 +2,6 @@
 
 namespace App\Filament\Admin\Resources;
 
-use App\Enums\CustomizationKey;
 use App\Enums\RolePermissionModels;
 use App\Filament\Admin\Resources\ExtensionResource\Pages;
 use App\Models\Extension;
@@ -34,9 +33,9 @@ class ExtensionResource extends Resource
         return 'Extensions';
     }
 
-    public static function getNavigationGroup(): ?string
+    public static function getNavigationSort(): ?int
     {
-        return user()?->getCustomization(CustomizationKey::TopNavigation) ? false : trans('admin/dashboard.advanced');
+        return 2;
     }
 
     public static function getNavigationBadge(): ?string

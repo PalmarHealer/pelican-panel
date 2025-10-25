@@ -3,7 +3,6 @@
 namespace App\Providers\Filament;
 
 use AchyutN\FilamentLogViewer\FilamentLogViewer;
-use App\Extensions\ExtensionManager;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Panel;
@@ -13,7 +12,7 @@ class AppPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         // Discover extensions
-        $extensionManager = app(ExtensionManager::class);
+        $extensionManager = app(\App\Extensions\ExtensionManager::class);
         $extensionManager->discover();
         $extensionManager->registerAll();
 
