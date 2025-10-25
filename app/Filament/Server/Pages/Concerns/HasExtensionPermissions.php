@@ -20,7 +20,7 @@ trait HasExtensionPermissions
     /**
      * Get all extension permissions for the current user.
      *
-     * @param string $extensionId The extension identifier (e.g., 'example-extension')
+     * @param  string  $extensionId  The extension identifier (e.g., 'example-extension')
      * @return array Array of permission categories with their granted status
      */
     protected function getExtensionPermissions(string $extensionId): array
@@ -65,9 +65,8 @@ trait HasExtensionPermissions
     /**
      * Check if user has a specific extension permission.
      *
-     * @param string $extensionId The extension identifier
-     * @param string $permission The permission key (e.g., 'read', 'write')
-     * @return bool
+     * @param  string  $extensionId  The extension identifier
+     * @param  string  $permission  The permission key (e.g., 'read', 'write')
      */
     protected function hasExtensionPermission(string $extensionId, string $permission): bool
     {
@@ -93,7 +92,7 @@ trait HasExtensionPermissions
     /**
      * Get all permissions as a flat list for easy checking.
      *
-     * @param string $extensionId The extension identifier
+     * @param  string  $extensionId  The extension identifier
      * @return array Associative array of permission key => granted status
      */
     protected function getExtensionPermissionsFlat(string $extensionId): array

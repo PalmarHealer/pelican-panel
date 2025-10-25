@@ -108,6 +108,8 @@ class Permission extends Model implements Validatable
     /**
      * Custom extension permissions registered by extensions.
      * Format: ['extension-id' => ['name' => '...', 'icon' => '...', 'permissions' => [...], 'descriptions' => [...]]]
+     *
+     * @var array<string, mixed>
      */
     protected static array $extensionPermissions = [];
 
@@ -132,8 +134,8 @@ class Permission extends Model implements Validatable
     /**
      * Register extension permissions.
      *
-     * @param string $extensionId Extension identifier
-     * @param array $permissionData Permission data with name, icon, permissions, descriptions
+     * @param  string  $extensionId  Extension identifier
+     * @param  array<string, mixed>  $permissionData  Permission data with name, icon, permissions, descriptions
      */
     public static function registerExtensionPermissions(string $extensionId, array $permissionData): void
     {
@@ -143,7 +145,7 @@ class Permission extends Model implements Validatable
     /**
      * Get all registered extension permissions.
      *
-     * @return array
+     * @return array<string, mixed>
      */
     public static function getExtensionPermissions(): array
     {

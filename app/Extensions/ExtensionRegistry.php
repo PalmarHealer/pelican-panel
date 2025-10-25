@@ -4,16 +4,22 @@ namespace App\Extensions;
 
 class ExtensionRegistry
 {
+    /** @var array<string, mixed> */
     protected array $permissions = [];
 
+    /** @var array<string, mixed> */
     protected array $serverPermissions = [];
 
+    /** @var array<string, mixed> */
     protected array $serverPageRestrictions = [];
 
+    /** @var array<string, mixed> */
     protected array $navigationItems = [];
 
+    /** @var array<string, mixed> */
     protected array $userMenuItems = [];
 
+    /** @var array<string, mixed> */
     protected array $renderHooks = [];
 
     /**
@@ -68,9 +74,9 @@ class ExtensionRegistry
      * Register navigation items for specific panels.
      * Note: App panel does not support navigation items (navigation is disabled).
      *
-     * @param string $itemId Unique item identifier
-     * @param string|callable $label Display label (or callable returning label)
-     * @param array $config Configuration:
+     * @param  string  $itemId  Unique item identifier
+     * @param  string|callable  $label  Display label (or callable returning label)
+     * @param  array  $config  Configuration:
      *                         - 'url': string|callable - URL for the navigation item
      *                         - 'icon': string - Icon name
      *                         - 'sort': int - Sort order
@@ -97,9 +103,9 @@ class ExtensionRegistry
     /**
      * Register user menu items for specific panels.
      *
-     * @param string $itemId Unique item identifier
-     * @param string|callable $label Display label (or callable returning label)
-     * @param array $config Configuration:
+     * @param  string  $itemId  Unique item identifier
+     * @param  string|callable  $label  Display label (or callable returning label)
+     * @param  array  $config  Configuration:
      *                         - 'url': string|callable - URL for the menu item
      *                         - 'icon': string - Icon name
      *                         - 'sort': int - Sort order
@@ -137,6 +143,8 @@ class ExtensionRegistry
 
     /**
      * Get all registered admin permissions.
+     *
+     * @return array<string, mixed>
      */
     public function getPermissions(): array
     {
@@ -145,6 +153,8 @@ class ExtensionRegistry
 
     /**
      * Get all registered server permissions.
+     *
+     * @return array<string, mixed>
      */
     public function getServerPermissions(): array
     {
@@ -153,6 +163,8 @@ class ExtensionRegistry
 
     /**
      * Get all registered navigation items.
+     *
+     * @return array<string, mixed>
      */
     public function getNavigationItems(): array
     {
@@ -161,6 +173,8 @@ class ExtensionRegistry
 
     /**
      * Get all registered user menu items.
+     *
+     * @return array<string, mixed>
      */
     public function getUserMenuItems(): array
     {
@@ -169,6 +183,8 @@ class ExtensionRegistry
 
     /**
      * Get all registered render hooks.
+     *
+     * @return array<string, mixed>
      */
     public function getRenderHooks(): array
     {
@@ -177,6 +193,8 @@ class ExtensionRegistry
 
     /**
      * Get all registered server page restrictions.
+     *
+     * @return array<string, mixed>
      */
     public function getServerPageRestrictions(): array
     {

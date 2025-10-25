@@ -6,7 +6,6 @@ use AchyutN\FilamentLogViewer\FilamentLogViewer;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Navigation\NavigationGroup;
-use Filament\Navigation\NavigationItem;
 use Filament\Panel;
 
 class AdminPanelProvider extends PanelProvider
@@ -14,7 +13,8 @@ class AdminPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         // Discover extensions
-        $extensionManager = app(\App\Extensions\ExtensionManager::class);
+        /** @var \App\Extensions\ExtensionManager $extensionManager */
+        $extensionManager = \Illuminate\Support\Facades\App::make(\App\Extensions\ExtensionManager::class);
         $extensionManager->discover();
         $extensionManager->registerAll();
 

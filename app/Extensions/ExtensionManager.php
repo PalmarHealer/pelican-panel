@@ -14,6 +14,7 @@ class ExtensionManager
 
     protected ExtensionRegistry $registry;
 
+    /** @var array<string, ExtensionInterface> */
     protected array $enabledExtensions = [];
 
     protected bool $discovered = false;
@@ -106,7 +107,7 @@ class ExtensionManager
             return;
         }
 
-        $controller = app($controllerClass);
+        $controller = \Illuminate\Support\Facades\App::make($controllerClass);
 
         if (!$controller instanceof ExtensionInterface) {
             return;
@@ -145,6 +146,8 @@ class ExtensionManager
 
     /**
      * Auto-register egg restrictions for server pages from extension.json metadata.
+     *
+     * @param  array<string, mixed>  $extension
      */
     protected function registerEggRestrictions(string $extensionId, array $extension): void
     {
@@ -354,7 +357,7 @@ class ExtensionManager
      *
      * @param  string  $zipPath  Path to the .zip file
      * @param  bool  $autoEnable  Whether to enable the extension after importing
-     * @return array Returns ['success' => bool, 'message' => string, 'isUpdate' => bool, 'extensionId' => string|null]
+     * @return array{success: bool, message: string, isUpdate: bool, extensionId: string|null}
      */
     public function importExtension(string $zipPath, bool $autoEnable = false): array
     {
@@ -673,6 +676,8 @@ class ExtensionManager
 
     /**
      * Get all enabled extensions.
+     *
+     * @return array<string, ExtensionInterface>
      */
     public function getEnabledExtensions(): array
     {
@@ -830,7 +835,7 @@ class ExtensionManager
      * Get user menu items for a specific panel.
      *
      * @param  string  $panelId  The panel ID ('admin', 'server', 'app')
-     * @return array Array of user menu items for this panel
+     * @return array<mixed>
      */
     public function getUserMenuItemsForPanel(string $panelId): array
     {
@@ -864,7 +869,7 @@ class ExtensionManager
      * Get navigation items for a specific panel.
      *
      * @param  string  $panelId  The panel ID ('admin', 'server', 'app')
-     * @return array Array of navigation items for this panel
+     * @return array<mixed>
      */
     public function getNavigationItemsForPanel(string $panelId): array
     {
@@ -950,7 +955,7 @@ class ExtensionManager
      * 2. Overrides: extensions/ext/lang/overrides/en/ -> merges with lang/en/
      * 3. Extension namespace: extensions/ext/lang/en/ -> accessible via trans('ext::file.key')
      *
-     * @return array Returns ['success' => bool, 'conflicts' => array]
+     * @return array{success: bool, conflicts: array<string>}
      */
     protected function publishLanguagePack(string $extensionId): array
     {
@@ -1019,7 +1024,7 @@ class ExtensionManager
      * Publish language overrides with conflict detection.
      * Copies override files to lang/ directories and merges with existing translations.
      *
-     * @return array Returns ['success' => bool, 'conflicts' => array, 'overrides' => array]
+     * @return array{success: bool, conflicts: array<string>, overrides: array<string>}
      */
     protected function publishLanguageOverrides(string $extensionId, string $overridesPath): array
     {
@@ -1124,7 +1129,7 @@ class ExtensionManager
     protected function loadLanguagePackTranslations(string $extensionId, string $sourcePath): void
     {
         // Register the namespace with Laravel's translator
-        app('translator')->addNamespace($extensionId, $sourcePath);
+        \Illuminate\Support\Facades\App::make('translator')->addNamespace($extensionId, $sourcePath);
     }
 
     /**

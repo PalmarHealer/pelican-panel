@@ -34,16 +34,19 @@ class Extension extends Model
     public function hasType(ExtensionType|string $type): bool
     {
         $typeValue = $type instanceof ExtensionType ? $type->value : $type;
+
         return in_array($typeValue, $this->types ?? []);
     }
 
     /**
      * Get extension type objects.
+     *
+     * @return array<ExtensionType>
      */
     public function getTypeObjects(): array
     {
         return collect($this->types ?? ['plugin'])
-            ->map(fn($type) => ExtensionType::tryFrom($type))
+            ->map(fn ($type) => ExtensionType::tryFrom($type))
             ->filter()
             ->toArray();
     }

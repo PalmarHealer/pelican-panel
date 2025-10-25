@@ -129,5 +129,4 @@ trait RestrictedByEggTags
 
         return parent::getNavigationItems();
     }
-
 }

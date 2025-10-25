@@ -186,7 +186,8 @@ class AppServiceProvider extends ServiceProvider
 
         // === EXTENSION SYSTEM (SINGLE INTEGRATION POINT) ===
         if (!$app->runningInConsole() || $app->runningUnitTests()) {
-            $extensionManager = app(\App\Extensions\ExtensionManager::class);
+            /** @var \App\Extensions\ExtensionManager $extensionManager */
+            $extensionManager = $this->app->make(\App\Extensions\ExtensionManager::class);
             $extensionManager->discover();
             $extensionManager->registerAll();
             $extensionManager->bootAll();
@@ -233,7 +234,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Register extension autoloaders early (before panel providers run)
         // This allows Filament's discoverPages() to find extension classes
-        $extensionManager = app(\App\Extensions\ExtensionManager::class);
+        /** @var \App\Extensions\ExtensionManager $extensionManager */
+        $extensionManager = $this->app->make(\App\Extensions\ExtensionManager::class);
         $extensionManager->registerAutoloaders();
     }
 }

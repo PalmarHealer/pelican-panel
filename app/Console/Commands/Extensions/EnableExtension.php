@@ -40,6 +40,7 @@ class EnableExtension extends Command
             return self::SUCCESS;
         } catch (\Exception $e) {
             $this->error("Failed to enable extension: {$e->getMessage()}");
+
             return self::FAILURE;
         }
     }

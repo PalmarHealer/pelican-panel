@@ -16,7 +16,8 @@ class ServerPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         // Discover extensions
-        $extensionManager = app(\App\Extensions\ExtensionManager::class);
+        /** @var \App\Extensions\ExtensionManager $extensionManager */
+        $extensionManager = \Illuminate\Support\Facades\App::make(\App\Extensions\ExtensionManager::class);
         $extensionManager->discover();
         $extensionManager->registerAll();
 

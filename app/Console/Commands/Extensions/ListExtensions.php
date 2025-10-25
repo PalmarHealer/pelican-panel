@@ -31,6 +31,7 @@ class ListExtensions extends Command
 
         if (!File::isDirectory($extensionPath)) {
             $this->error('Extensions directory not found.');
+
             return self::FAILURE;
         }
 
@@ -38,6 +39,7 @@ class ListExtensions extends Command
 
         if (empty($directories)) {
             $this->info('No extensions found.');
+
             return self::SUCCESS;
         }
 
@@ -70,6 +72,7 @@ class ListExtensions extends Command
 
         if (empty($extensions)) {
             $this->info('No valid extensions found.');
+
             return self::SUCCESS;
         }
 

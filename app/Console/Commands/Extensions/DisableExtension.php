@@ -40,6 +40,7 @@ class DisableExtension extends Command
             return self::SUCCESS;
         } catch (\Exception $e) {
             $this->error("Failed to disable extension: {$e->getMessage()}");
+
             return self::FAILURE;
         }
     }
