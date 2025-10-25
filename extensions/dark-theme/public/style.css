@@ -1,0 +1,71 @@
+/**
+ * Dark Theme for Pelican Panel
+ * Supports both light and dark mode with mode-specific overrides
+ */
+
+/* ============================================
+   LIGHT MODE STYLES
+   ============================================ */
+
+/* Light mode - default (when .dark class is NOT present) */
+:root {
+    /* Light mode colors */
+    --primary-50: #eff6ff;
+    --primary-500: #3b82f6;
+    --primary-600: #2563eb;
+    --primary-700: #1d4ed8;
+}
+
+/* Light mode specific styles */
+html:not(.dark) .fi-section {
+    background: white;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+html:not(.dark) .fi-topbar {
+    background: antiquewhite !important;
+}
+
+html:not(.dark) .fi-btn-primary {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+}
+
+html:not(.dark) .fi-sidebar {
+    background: white;
+    border-right: 1px solid #e5e7eb;
+}
+
+/* ============================================
+   DARK MODE STYLES
+   ============================================ */
+
+/* Dark mode specific overrides */
+.dark {
+    --fi-body-bg: #030712;
+    --fi-sidebar-bg: #111827;
+}
+
+/* Dark mode sections */
+.dark .fi-section {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+    border: 1px solid #374151;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode buttons with glow */
+.dark .fi-btn-primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+}
+
+.dark .fi-btn-primary:hover {
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.7);
+    transform: translateY(-1px);
+}
+
+/* Dark mode sidebar */
+.dark .fi-sidebar {
+    background: linear-gradient(180deg, #111827 0%, #030712 100%);
+    border-right: 2px solid #1e3a8a;
+}
