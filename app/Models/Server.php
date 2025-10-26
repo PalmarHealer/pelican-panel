@@ -262,6 +262,15 @@ class Server extends Model implements Validatable
     }
 
     /**
+     * Check if the server is owned by the given user.
+     * Required by Filament's multi-tenancy feature.
+     */
+    public function isOwnedBy(User $user): bool
+    {
+        return $this->owner_id === $user->id;
+    }
+
+    /**
      * Gets the subusers associated with a server.
      *
      * @return HasMany<Subuser, $this>

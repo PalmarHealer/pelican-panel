@@ -17,6 +17,7 @@ use App\Models\Database;
 use App\Models\Egg;
 use App\Models\EggVariable;
 use App\Models\Node;
+use App\Models\Role;
 use App\Models\Schedule;
 use App\Models\Server;
 use App\Models\Task;
@@ -182,6 +183,43 @@ class AppServiceProvider extends ServiceProvider
         AboutCommand::add('Drivers', 'Backups', config('backups.default'));
 
         AboutCommand::add('Environment', 'Installation Directory', base_path());
+
+        // === EXTENSION SYSTEM (SINGLE INTEGRATION POINT) ===
+        if (!$app->runningInConsole() || $app->runningUnitTests()) {
+            /** @var \App\Extensions\ExtensionManager $extensionManager */
+            $extensionManager = $this->app->make(\App\Extensions\ExtensionManager::class);
+            $extensionManager->discover();
+            $extensionManager->registerAll();
+            $extensionManager->bootAll();
+
+            // Apply registrations
+            $this->applyExtensionRegistrations($extensionManager);
+        }
+    }
+
+    /**
+     * Apply extension registrations to the application.
+     */
+    protected function applyExtensionRegistrations(\App\Extensions\ExtensionManager $manager): void
+    {
+        $registry = $manager->getRegistry();
+
+        // Apply admin/role permissions
+        foreach ($registry->getPermissions() as $model => $permissions) {
+            Role::registerCustomPermissions([$model => $permissions]);
+        }
+
+        // Apply server panel (subuser) permissions
+        foreach ($registry->getServerPermissions() as $extensionId => $permissionData) {
+            \App\Models\Permission::registerExtensionPermissions($extensionId, $permissionData);
+        }
+
+        // Apply render hooks
+        foreach ($registry->getRenderHooks() as $hook => $callbacks) {
+            foreach ($callbacks as $callback) {
+                FilamentView::registerRenderHook($hook, $callback['callback']);
+            }
+        }
     }
 
     /**
@@ -190,5 +228,14 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         Scramble::ignoreDefaultRoutes();
+
+        // Register ExtensionManager as singleton so all instances share the same data
+        $this->app->singleton(\App\Extensions\ExtensionManager::class);
+
+        // Register extension autoloaders early (before panel providers run)
+        // This allows Filament's discoverPages() to find extension classes
+        /** @var \App\Extensions\ExtensionManager $extensionManager */
+        $extensionManager = $this->app->make(\App\Extensions\ExtensionManager::class);
+        $extensionManager->registerAutoloaders();
     }
 }

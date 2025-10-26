@@ -1,0 +1,13 @@
+{
+    "id": "example-extension",
+    "name": "Example Extension",
+    "description": "Comprehensive example demonstrating all extension system features including pages, permissions, navigation, and egg-specific restrictions",
+    "version": "1.0.0",
+    "author": "Palmar Healer",
+    "author_email": "support@example.dev",
+    "types": ["plugin"],
+    "controller": "ExtensionController",
+    "egg_restrictions": {
+        "server/Pages/ExampleServerPage": ["vanilla", "java"]
+    }
+}

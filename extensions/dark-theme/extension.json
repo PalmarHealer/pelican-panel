@@ -1,0 +1,10 @@
+{
+    "id": "dark-theme",
+    "name": "Dark Theme",
+    "description": "A beautiful dark theme for Pelican Panel with custom colors and styling",
+    "version": "1.0.0",
+    "author": "Palmar Healer",
+    "author_email": "support@example.dev",
+    "types": ["theme"],
+    "controller": "ExtensionController"
+}
