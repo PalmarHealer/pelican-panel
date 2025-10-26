@@ -37,17 +37,17 @@ class ExtensionRegistry
      *
      * @param  string  $extensionId  Extension identifier (e.g., 'example-extension')
      * @param  array<string, mixed>  $permissionData  Array with structure:
-     *                                 [
-     *                                 'name' => 'extension_name',
-     *                                 'icon' => 'tabler-icon',
-     *                                 'permissions' => ['action1', 'action2'],
-     *                                 'descriptions' => [
-     *                                 'desc' => 'Category description',
-     *                                 'action1' => 'Action 1 description',
-     *                                 'action2' => 'Action 2 description',
-     *                                 ],
-     *                                 'egg_tags' => ['minecraft', 'java'] // Optional: restrict to specific egg tags
-     *                                 ]
+     *                                                [
+     *                                                'name' => 'extension_name',
+     *                                                'icon' => 'tabler-icon',
+     *                                                'permissions' => ['action1', 'action2'],
+     *                                                'descriptions' => [
+     *                                                'desc' => 'Category description',
+     *                                                'action1' => 'Action 1 description',
+     *                                                'action2' => 'Action 2 description',
+     *                                                ],
+     *                                                'egg_tags' => ['minecraft', 'java'] // Optional: restrict to specific egg tags
+     *                                                ]
      */
     public function serverPermissions(string $extensionId, array $permissionData): void
     {
@@ -77,12 +77,12 @@ class ExtensionRegistry
      * @param  string  $itemId  Unique item identifier
      * @param  string|callable  $label  Display label (or callable returning label)
      * @param  array<string, mixed>  $config  Configuration:
-     *                         - 'url': string|callable - URL for the navigation item
-     *                         - 'icon': string - Icon name
-     *                         - 'sort': int - Sort order
-     *                         - 'group': string|null - Navigation group (admin panel only)
-     *                         - 'visible': callable|bool - Visibility condition
-     *                         - 'panels': array - Which panels to register on ['admin' => true, 'server' => true]
+     *                                        - 'url': string|callable - URL for the navigation item
+     *                                        - 'icon': string - Icon name
+     *                                        - 'sort': int - Sort order
+     *                                        - 'group': string|null - Navigation group (admin panel only)
+     *                                        - 'visible': callable|bool - Visibility condition
+     *                                        - 'panels': array - Which panels to register on ['admin' => true, 'server' => true]
      */
     public function navigationItem(
         string $itemId,
@@ -106,11 +106,11 @@ class ExtensionRegistry
      * @param  string  $itemId  Unique item identifier
      * @param  string|callable  $label  Display label (or callable returning label)
      * @param  array<string, mixed>  $config  Configuration:
-     *                         - 'url': string|callable - URL for the menu item
-     *                         - 'icon': string - Icon name
-     *                         - 'sort': int - Sort order
-     *                         - 'visible': callable|bool - Visibility condition
-     *                         - 'panels': array - Which panels to register on ['admin' => true, 'server' => true, 'app' => true]
+     *                                        - 'url': string|callable - URL for the menu item
+     *                                        - 'icon': string - Icon name
+     *                                        - 'sort': int - Sort order
+     *                                        - 'visible': callable|bool - Visibility condition
+     *                                        - 'panels': array - Which panels to register on ['admin' => true, 'server' => true, 'app' => true]
      */
     public function userMenuItem(
         string $itemId,

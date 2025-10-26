@@ -179,7 +179,6 @@ class ViewExtension extends Page
     }
 
     /**
-     * @param  ExtensionRegistry  $registry
      * @return array<string, mixed>
      */
     protected function getExtensionRegistrations(ExtensionRegistry $registry): array

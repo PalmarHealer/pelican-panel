@@ -1098,9 +1098,8 @@ class ExtensionManager
     /**
      * Find which extension (if any) has overridden a specific language file.
      *
-     * @param string $fileKey Format: "locale/filename.php" (e.g., "en/activity.php")
-     * @param string|null $excludeExtensionId Extension to exclude from search
-     * @return Extension|null
+     * @param  string  $fileKey  Format: "locale/filename.php" (e.g., "en/activity.php")
+     * @param  string|null  $excludeExtensionId  Extension to exclude from search
      */
     protected function findExtensionOverridingFile(string $fileKey, ?string $excludeExtensionId = null): ?Extension
     {
