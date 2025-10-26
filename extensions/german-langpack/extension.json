@@ -1,0 +1,10 @@
+{
+    "id": "german-langpack",
+    "name": "German Language Pack",
+    "description": "Demonstrates conflict detection - tries to override the same English files as Pirate Pack",
+    "version": "1.0.0",
+    "author": "Palmar Healer",
+    "author_email": "support@example.dev",
+    "types": ["language-pack"],
+    "controller": "ExtensionController"
+}

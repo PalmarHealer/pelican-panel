@@ -106,6 +106,14 @@ class Permission extends Model implements Validatable
     public $timestamps = false;
 
     /**
+     * Custom extension permissions registered by extensions.
+     * Format: ['extension-id' => ['name' => '...', 'icon' => '...', 'permissions' => [...], 'descriptions' => [...]]]
+     *
+     * @var array<string, mixed>
+     */
+    protected static array $extensionPermissions = [];
+
+    /**
      * Fields that are not mass assignable.
      */
     protected $guarded = ['id', 'created_at', 'updated_at'];
@@ -124,17 +132,39 @@ class Permission extends Model implements Validatable
     }
 
     /**
+     * Register extension permissions.
+     *
+     * @param  string  $extensionId  Extension identifier
+     * @param  array<string, mixed>  $permissionData  Permission data with name, icon, permissions, descriptions
+     */
+    public static function registerExtensionPermissions(string $extensionId, array $permissionData): void
+    {
+        static::$extensionPermissions[$extensionId] = $permissionData;
+    }
+
+    /**
+     * Get all registered extension permissions.
+     *
+     * @return array<string, mixed>
+     */
+    public static function getExtensionPermissions(): array
+    {
+        return static::$extensionPermissions;
+    }
+
+    /**
      * All the permissions available on the system.
      *
+     * @param  \App\Models\Server|null  $server  Optional server to filter permissions by egg tags
      * @return array<int, array{
      *      name: string,
      *      icon: string,
      *      permissions: string[]
      *  }>
      */
-    public static function permissionData(): array
+    public static function permissionData(?\App\Models\Server $server = null): array
     {
-        return [
+        $basePermissions = [
             [
                 'name' => 'control',
                 'icon' => 'tabler-terminal-2',
@@ -186,6 +216,36 @@ class Permission extends Model implements Validatable
                 'permissions' => ['read'],
             ],
         ];
+
+        // Merge in dynamically registered extension permissions
+        // Filter by egg tags if server is provided
+        foreach (static::$extensionPermissions as $extensionId => $permissionData) {
+            // Check if extension permissions are restricted to specific egg tags
+            if ($server && isset($permissionData['egg_tags']) && !empty($permissionData['egg_tags'])) {
+                $serverEggTags = $server->egg->tags ?? [];
+                $hasMatchingTag = false;
+
+                foreach ($permissionData['egg_tags'] as $requiredTag) {
+                    if (in_array($requiredTag, $serverEggTags)) {
+                        $hasMatchingTag = true;
+                        break;
+                    }
+                }
+
+                // Skip this permission if no matching tag
+                if (!$hasMatchingTag) {
+                    continue;
+                }
+            }
+
+            $basePermissions[] = [
+                'name' => $permissionData['name'],
+                'icon' => $permissionData['icon'] ?? 'tabler-puzzle',
+                'permissions' => $permissionData['permissions'],
+            ];
+        }
+
+        return $basePermissions;
     }
 
     /**
@@ -203,10 +263,26 @@ class Permission extends Model implements Validatable
         ];
 
         foreach (static::permissionData() as $data) {
-            $permissions[$data['name']] = [
-                'description' => trans('server/users.permissions.' . $data['name'] . '_desc'),
-                'keys' => collect($data['permissions'])->mapWithKeys(fn ($key) => [$key => trans('server/users.permissions.' . $data['name'] . '_' . str($key)->replace('-', '_'))])->toArray(),
-            ];
+            $permissionName = $data['name'];
+
+            // Check if this is a custom extension permission with descriptions
+            $extensionData = collect(static::$extensionPermissions)->first(fn ($ext) => $ext['name'] === $permissionName);
+
+            if ($extensionData && isset($extensionData['descriptions'])) {
+                // Use custom descriptions from extension
+                $permissions[$permissionName] = [
+                    'description' => $extensionData['descriptions']['desc'] ?? "Extension permissions for {$permissionName}",
+                    'keys' => collect($data['permissions'])->mapWithKeys(fn ($key) => [
+                        $key => $extensionData['descriptions'][$key] ?? ucfirst(str_replace('-', ' ', $key)),
+                    ])->toArray(),
+                ];
+            } else {
+                // Use translation-based descriptions
+                $permissions[$permissionName] = [
+                    'description' => trans('server/users.permissions.' . $permissionName . '_desc'),
+                    'keys' => collect($data['permissions'])->mapWithKeys(fn ($key) => [$key => trans('server/users.permissions.' . $permissionName . '_' . str($key)->replace('-', '_'))])->toArray(),
+                ];
+            }
         }
 
         return collect($permissions);

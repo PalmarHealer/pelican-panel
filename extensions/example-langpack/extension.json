@@ -1,0 +1,10 @@
+{
+    "id": "example-langpack",
+    "name": "Pirate Language Pack",
+    "description": "Arrr! Demonstrates all language pack features: new language (Pirate English), English overrides, and custom extension labels",
+    "version": "1.0.0",
+    "author": "Palmar Healer",
+    "author_email": "support@example.dev",
+    "types": ["language-pack"],
+    "controller": "ExtensionController"
+}
