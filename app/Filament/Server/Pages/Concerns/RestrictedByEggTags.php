@@ -23,6 +23,8 @@ use Filament\Facades\Filament;
  *
  * Note: This trait automatically overrides shouldRegisterNavigation() to hide the page
  * from navigation when egg restrictions don't match. You don't need to do anything extra!
+ *
+ * @phpstan-ignore trait.unused
  */
 trait RestrictedByEggTags
 {

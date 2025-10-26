@@ -12,6 +12,8 @@ use Filament\Facades\Filament;
  *   1. Add `use HasExtensionPermissions;` to your extension server page
  *   2. Call `$this->getExtensionPermissions('your-extension-id')` in mount() or as a property
  *   3. Display the permissions in your Blade view
+ *
+ * @phpstan-ignore trait.unused
  */
 trait HasExtensionPermissions
 {

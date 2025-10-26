@@ -258,7 +258,7 @@ class ExtensionManager
             $result = $this->publishLanguagePack($extensionId);
 
             // Check for conflicts
-            if (!$result['success'] && !empty($result['conflicts'])) {
+            if (!empty($result['conflicts'])) {
                 // Rollback: disable the extension
                 $extension->update(['enabled' => false]);
 
@@ -272,7 +272,7 @@ class ExtensionManager
                 }
 
                 // Build conflict message
-                $conflictMessages = collect($result['conflicts'])->map(function ($conflict) {
+                $conflictMessages = collect($result['conflicts'])->map(function (array $conflict) {
                     return "'{$conflict['file']}' is already overridden by '{$conflict['blocking_extension']}'";
                 })->join(', ');
 
@@ -955,7 +955,7 @@ class ExtensionManager
      * 2. Overrides: extensions/ext/lang/overrides/en/ -> merges with lang/en/
      * 3. Extension namespace: extensions/ext/lang/en/ -> accessible via trans('ext::file.key')
      *
-     * @return array{success: bool, conflicts: array<string>}
+     * @return array{success: bool, conflicts: list<array{file: non-falsy-string, blocking_extension: string, blocking_extension_id: string}>}
      */
     protected function publishLanguagePack(string $extensionId): array
     {
@@ -1021,10 +1021,10 @@ class ExtensionManager
     }
 
     /**
-     * Publish language overrides with conflict detection.
-     * Copies override files to lang/ directories and merges with existing translations.
+     * Publish language overriding with conflict detection.
+     * Copies override files to lang/ directories and merge with existing translations.
      *
-     * @return array{success: bool, conflicts: array<string>, overrides: array<string>}
+     * @return array{success: bool, conflicts: list<array{file: non-falsy-string, blocking_extension: string, blocking_extension_id: string}>, overrides: list<non-falsy-string>}
      */
     protected function publishLanguageOverrides(string $extensionId, string $overridesPath): array
     {
@@ -1098,8 +1098,9 @@ class ExtensionManager
     /**
      * Find which extension (if any) has overridden a specific language file.
      *
-     * @param  string  $fileKey  Format: "locale/filename.php" (e.g., "en/activity.php")
-     * @param  string  $excludeExtensionId  Extension to exclude from search
+     * @param string $fileKey Format: "locale/filename.php" (e.g., "en/activity.php")
+     * @param string|null $excludeExtensionId Extension to exclude from search
+     * @return Extension|null
      */
     protected function findExtensionOverridingFile(string $fileKey, ?string $excludeExtensionId = null): ?Extension
     {
@@ -1172,7 +1173,8 @@ class ExtensionManager
     {
         // Get the list of files this extension overrode
         $extension = Extension::where('identifier', $extensionId)->first();
-        $trackedOverrides = $extension?->language_overrides ?? [];
+        $trackedOverrides = $extension !== null ? $extension->language_overrides : null;
+        $trackedOverrides = $trackedOverrides ?? [];
 
         if (empty($trackedOverrides)) {
             return; // No overrides to restore

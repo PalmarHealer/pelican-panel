@@ -25,7 +25,7 @@ class ExtensionRegistry
     /**
      * Register custom admin/role permissions.
      *
-     * @param  array  $permissions  Array of model => actions
+     * @param  array<string, mixed>  $permissions  Array of model => actions
      */
     public function permissions(array $permissions): void
     {
@@ -36,7 +36,7 @@ class ExtensionRegistry
      * Register custom server panel (subuser) permissions.
      *
      * @param  string  $extensionId  Extension identifier (e.g., 'example-extension')
-     * @param  array  $permissionData  Array with structure:
+     * @param  array<string, mixed>  $permissionData  Array with structure:
      *                                 [
      *                                 'name' => 'extension_name',
      *                                 'icon' => 'tabler-icon',
@@ -60,7 +60,7 @@ class ExtensionRegistry
      *
      * @param  string  $extensionId  Extension identifier (e.g., 'example-extension')
      * @param  string  $pageClass  Fully qualified page class name
-     * @param  array  $eggTags  Array of egg tags (e.g., ['minecraft', 'java'])
+     * @param  array<string>  $eggTags  Array of egg tags (e.g., ['minecraft', 'java'])
      */
     public function serverPageRestriction(string $extensionId, string $pageClass, array $eggTags): void
     {
@@ -76,7 +76,7 @@ class ExtensionRegistry
      *
      * @param  string  $itemId  Unique item identifier
      * @param  string|callable  $label  Display label (or callable returning label)
-     * @param  array  $config  Configuration:
+     * @param  array<string, mixed>  $config  Configuration:
      *                         - 'url': string|callable - URL for the navigation item
      *                         - 'icon': string - Icon name
      *                         - 'sort': int - Sort order
@@ -105,7 +105,7 @@ class ExtensionRegistry
      *
      * @param  string  $itemId  Unique item identifier
      * @param  string|callable  $label  Display label (or callable returning label)
-     * @param  array  $config  Configuration:
+     * @param  array<string, mixed>  $config  Configuration:
      *                         - 'url': string|callable - URL for the menu item
      *                         - 'icon': string - Icon name
      *                         - 'sort': int - Sort order
@@ -128,7 +128,7 @@ class ExtensionRegistry
      *
      * @param  string  $hook  The hook name (use PanelsRenderHook constants)
      * @param  callable  $callback  Callback to render content
-     * @param  array  $options  Additional options
+     * @param  array<string, mixed>  $options  Additional options
      */
     public function renderHook(
         string $hook,

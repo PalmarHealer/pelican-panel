@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\ExtensionResource\Pages;
 
 use App\Extensions\ExtensionManager;
+use App\Extensions\ExtensionRegistry;
 use App\Filament\Admin\Resources\ExtensionResource;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -13,7 +14,7 @@ class ViewExtension extends Page
 {
     protected static string $resource = ExtensionResource::class;
 
-    public $record;
+    public \App\Models\Extension $record;
 
     public function getView(): string
     {
@@ -22,7 +23,9 @@ class ViewExtension extends Page
 
     public function mount(int|string $record): void
     {
-        $this->record = ExtensionResource::resolveRecordRouteBinding($record);
+        /** @var \App\Models\Extension $resolvedRecord */
+        $resolvedRecord = ExtensionResource::resolveRecordRouteBinding($record);
+        $this->record = $resolvedRecord;
     }
 
     protected function getHeaderActions(): array
@@ -38,7 +41,8 @@ class ViewExtension extends Page
                     ? 'Are you sure you want to disable this extension?'
                     : 'Are you sure you want to enable this extension?')
                 ->action(function () {
-                    $manager = app(ExtensionManager::class);
+                    /** @var ExtensionManager $manager */
+                    $manager = \Illuminate\Support\Facades\App::make(ExtensionManager::class);
 
                     try {
                         if ($this->record->enabled) {
@@ -128,7 +132,8 @@ class ViewExtension extends Page
                 ->modalDescription('This will completely remove the extension from your system, including all files, migrations, and database records. This action cannot be undone.')
                 ->visible(fn () => !$this->record->enabled)
                 ->action(function () {
-                    $manager = app(ExtensionManager::class);
+                    /** @var ExtensionManager $manager */
+                    $manager = \Illuminate\Support\Facades\App::make(ExtensionManager::class);
 
                     try {
                         $manager->uninstall($this->record->identifier);
@@ -157,7 +162,8 @@ class ViewExtension extends Page
         $metadataFile = $extensionPath . '/extension.json';
         $metadata = File::exists($metadataFile) ? json_decode(File::get($metadataFile), true) : [];
 
-        $manager = app(ExtensionManager::class);
+        /** @var ExtensionManager $manager */
+        $manager = \Illuminate\Support\Facades\App::make(ExtensionManager::class);
         $registry = $manager->getRegistry();
 
         // Get registrations from registry
@@ -172,7 +178,11 @@ class ViewExtension extends Page
         return compact('metadata', 'registrations', 'extensionPath', 'languageInfo', 'themeInfo');
     }
 
-    protected function getExtensionRegistrations($registry): array
+    /**
+     * @param  ExtensionRegistry  $registry
+     * @return array<string, mixed>
+     */
+    protected function getExtensionRegistrations(ExtensionRegistry $registry): array
     {
         $extensionId = $this->record->identifier;
         $studlyId = str($extensionId)->studly()->toString();
@@ -298,6 +308,8 @@ class ViewExtension extends Page
 
     /**
      * Get language pack information
+     *
+     * @return array<string, mixed>
      */
     protected function getLanguagePackInfo(string $extensionPath): array
     {
@@ -367,6 +379,8 @@ class ViewExtension extends Page
 
     /**
      * Get theme information
+     *
+     * @return array<string, mixed>
      */
     protected function getThemeInfo(string $extensionPath): array
     {

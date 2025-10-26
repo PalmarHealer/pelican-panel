@@ -46,7 +46,8 @@ class ListExtensions extends ListRecords
                         ->helperText('Automatically enable the extension after importing'),
                 ])
                 ->action(function (array $data) {
-                    $manager = app(ExtensionManager::class);
+                    /** @var ExtensionManager $manager */
+                    $manager = \Illuminate\Support\Facades\App::make(ExtensionManager::class);
 
                     // Get the uploaded file path
                     $zipPath = storage_path('app/private/' . $data['extension_zip']);
@@ -155,7 +156,8 @@ class ListExtensions extends ListRecords
                     ->modalHeading(fn (Extension $record) => ($record->enabled ? 'Disable' : 'Enable') . ' Extension')
                     ->modalDescription(fn (Extension $record) => 'Are you sure you want to ' . ($record->enabled ? 'disable' : 'enable') . ' this extension?')
                     ->action(function (Extension $record) {
-                        $manager = app(ExtensionManager::class);
+                        /** @var ExtensionManager $manager */
+                        $manager = \Illuminate\Support\Facades\App::make(ExtensionManager::class);
 
                         try {
                             if ($record->enabled) {
@@ -242,7 +244,8 @@ class ListExtensions extends ListRecords
                     ->modalHeading('Remove Extension')
                     ->modalDescription('This will completely remove the extension from your system, including all files, migrations, and database records. This action cannot be undone.')
                     ->action(function (Extension $record) {
-                        $manager = app(ExtensionManager::class);
+                        /** @var ExtensionManager $manager */
+                        $manager = \Illuminate\Support\Facades\App::make(ExtensionManager::class);
 
                         try {
                             $manager->uninstall($record->identifier);
@@ -271,9 +274,11 @@ class ListExtensions extends ListRecords
                     ->color('success')
                     ->requiresConfirmation()
                     ->action(function (Collection $records) {
-                        $manager = app(ExtensionManager::class);
+                        /** @var ExtensionManager $manager */
+                        $manager = \Illuminate\Support\Facades\App::make(ExtensionManager::class);
                         $count = 0;
 
+                        /** @var Extension $record */
                         foreach ($records as $record) {
                             if (!$record->enabled) {
                                 try {
@@ -303,9 +308,11 @@ class ListExtensions extends ListRecords
                     ->color('danger')
                     ->requiresConfirmation()
                     ->action(function (Collection $records) {
-                        $manager = app(ExtensionManager::class);
+                        /** @var ExtensionManager $manager */
+                        $manager = \Illuminate\Support\Facades\App::make(ExtensionManager::class);
                         $count = 0;
 
+                        /** @var Extension $record */
                         foreach ($records as $record) {
                             if ($record->enabled) {
                                 try {
