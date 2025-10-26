@@ -23,8 +23,21 @@ class ViewExtension extends Page
 
     public function mount(int|string $record): void
     {
-        /** @var \App\Models\Extension $resolvedRecord */
+        // If $record is a JSON string (serialized model), decode it to get the ID
+        if (is_string($record) && str_starts_with($record, '{')) {
+            $decoded = json_decode($record, true);
+            if ($decoded && isset($decoded['id'])) {
+                $record = $decoded['id'];
+            }
+        }
+
+        /** @var \App\Models\Extension|null $resolvedRecord */
         $resolvedRecord = ExtensionResource::resolveRecordRouteBinding($record);
+
+        if ($resolvedRecord === null) {
+            abort(404, 'Extension not found. Please scan for extensions first.');
+        }
+
         $this->record = $resolvedRecord;
     }
 
