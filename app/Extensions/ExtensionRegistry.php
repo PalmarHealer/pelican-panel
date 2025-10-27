@@ -4,6 +4,9 @@ namespace App\Extensions;
 
 class ExtensionRegistry
 {
+    /** @var string|null Current extension being registered */
+    protected ?string $currentExtension = null;
+
     /** @var array<string, mixed> */
     protected array $permissions = [];
 
@@ -23,13 +26,37 @@ class ExtensionRegistry
     protected array $renderHooks = [];
 
     /**
+     * Set the current extension being registered.
+     *
+     * @param  string|null  $extensionId  Extension identifier
+     */
+    public function setCurrentExtension(?string $extensionId): void
+    {
+        $this->currentExtension = $extensionId;
+    }
+
+    /**
      * Register custom admin/role permissions.
      *
      * @param  array<string, mixed>  $permissions  Array of model => actions
      */
     public function permissions(array $permissions): void
     {
-        $this->permissions = array_merge($this->permissions, $permissions);
+        foreach ($permissions as $model => $actions) {
+            if (!isset($this->permissions[$model])) {
+                $this->permissions[$model] = [
+                    'actions' => [],
+                    'extensions' => [],
+                ];
+            }
+            $this->permissions[$model]['actions'] = array_merge(
+                $this->permissions[$model]['actions'],
+                $actions
+            );
+            if ($this->currentExtension) {
+                $this->permissions[$model]['extensions'][] = $this->currentExtension;
+            }
+        }
     }
 
     /**
@@ -97,6 +124,7 @@ class ExtensionRegistry
         $this->navigationItems[$itemId] = array_merge([
             'label' => $label,
             'panels' => ['admin' => false, 'server' => false],
+            'extension_id' => $this->currentExtension,
         ], $config);
     }
 
@@ -120,6 +148,7 @@ class ExtensionRegistry
         $this->userMenuItems[$itemId] = array_merge([
             'label' => $label,
             'panels' => ['admin' => false, 'server' => false, 'app' => false],
+            'extension_id' => $this->currentExtension,
         ], $config);
     }
 
@@ -138,57 +167,111 @@ class ExtensionRegistry
         $this->renderHooks[$hook][] = [
             'callback' => $callback,
             'options' => $options,
+            'extension_id' => $this->currentExtension,
         ];
     }
 
     /**
      * Get all registered admin permissions.
      *
+     * @param  string|null  $extensionId  Optional: Filter by extension ID
      * @return array<string, mixed>
      */
-    public function getPermissions(): array
+    public function getPermissions(?string $extensionId = null): array
     {
-        return $this->permissions;
+        if ($extensionId === null) {
+            // Return in old format for backward compatibility
+            $result = [];
+            foreach ($this->permissions as $model => $data) {
+                $result[$model] = $data['actions'];
+            }
+            return $result;
+        }
+
+        $result = [];
+        foreach ($this->permissions as $model => $data) {
+            if (in_array($extensionId, $data['extensions'] ?? [])) {
+                $result[$model] = $data['actions'];
+            }
+        }
+        return $result;
     }
 
     /**
      * Get all registered server permissions.
      *
+     * @param  string|null  $extensionId  Optional: Filter by extension ID
      * @return array<string, mixed>
      */
-    public function getServerPermissions(): array
+    public function getServerPermissions(?string $extensionId = null): array
     {
-        return $this->serverPermissions;
+        if ($extensionId === null) {
+            return $this->serverPermissions;
+        }
+
+        return array_filter($this->serverPermissions, function ($data, $id) use ($extensionId) {
+            return $id === $extensionId;
+        }, ARRAY_FILTER_USE_BOTH);
     }
 
     /**
      * Get all registered navigation items.
      *
+     * @param  string|null  $extensionId  Optional: Filter by extension ID
      * @return array<string, mixed>
      */
-    public function getNavigationItems(): array
+    public function getNavigationItems(?string $extensionId = null): array
     {
-        return $this->navigationItems;
+        if ($extensionId === null) {
+            return $this->navigationItems;
+        }
+
+        return array_filter($this->navigationItems, function ($item) use ($extensionId) {
+            return ($item['extension_id'] ?? null) === $extensionId;
+        });
     }
 
     /**
      * Get all registered user menu items.
      *
+     * @param  string|null  $extensionId  Optional: Filter by extension ID
      * @return array<string, mixed>
      */
-    public function getUserMenuItems(): array
+    public function getUserMenuItems(?string $extensionId = null): array
     {
-        return $this->userMenuItems;
+        if ($extensionId === null) {
+            return $this->userMenuItems;
+        }
+
+        return array_filter($this->userMenuItems, function ($item) use ($extensionId) {
+            return ($item['extension_id'] ?? null) === $extensionId;
+        });
     }
 
     /**
      * Get all registered render hooks.
      *
+     * @param  string|null  $extensionId  Optional: Filter by extension ID
      * @return array<string, mixed>
      */
-    public function getRenderHooks(): array
+    public function getRenderHooks(?string $extensionId = null): array
     {
-        return $this->renderHooks;
+        if ($extensionId === null) {
+            return $this->renderHooks;
+        }
+
+        $filtered = [];
+        foreach ($this->renderHooks as $hook => $callbacks) {
+            $filtered[$hook] = array_filter($callbacks, function ($callback) use ($extensionId) {
+                return ($callback['extension_id'] ?? null) === $extensionId;
+            });
+            // Only include the hook if it has callbacks after filtering
+            if (empty($filtered[$hook])) {
+                unset($filtered[$hook]);
+            }
+        }
+
+        return $filtered;
     }
 
     /**

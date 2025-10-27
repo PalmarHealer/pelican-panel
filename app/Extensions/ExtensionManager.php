@@ -134,11 +134,17 @@ class ExtensionManager
         }
 
         $this->extensions->each(function ($extension, $extensionId) {
+            // Set the current extension in the registry
+            $this->registry->setCurrentExtension($extensionId);
+
             // Auto-register egg restrictions from metadata
             $this->registerEggRestrictions($extensionId, $extension);
 
             // Call extension's register method
             $extension['controller']->register($this->registry);
+
+            // Clear the current extension
+            $this->registry->setCurrentExtension(null);
         });
 
         $this->registered = true;
