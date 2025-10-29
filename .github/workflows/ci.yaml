@@ -22,7 +22,7 @@ env:
 jobs:
   sqlite:
     name: SQLite
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
@@ -72,7 +72,7 @@ jobs:
 
   mysql:
     name: MySQL
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
@@ -196,7 +196,7 @@ jobs:
 
   postgresql:
     name: PostgreSQL
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:

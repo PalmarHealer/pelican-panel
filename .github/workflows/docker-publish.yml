@@ -15,7 +15,7 @@ env:
 jobs:
   build-php-base:
     name: Build PHP base image on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
@@ -61,7 +61,7 @@ jobs:
 
   build-and-push:
     name: Build and Push ubuntu-24.04
-    runs-on: self-hosted
+    runs-on: ubuntu-24.04
     needs: build-php-base
     permissions:
       contents: read
