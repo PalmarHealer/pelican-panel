@@ -15,7 +15,7 @@ env:
 jobs:
   build-php-base:
     name: Build PHP base image on ${{ matrix.os }}
-    runs-on: self-hosted
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
       packages: write
