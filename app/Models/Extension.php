@@ -28,6 +28,10 @@ class Extension extends Model
         'language_overrides' => 'array',
     ];
 
+    protected $attributes = [
+        'types' => '["plugin"]',
+    ];
+
     /**
      * Check if extension has a specific type.
      */

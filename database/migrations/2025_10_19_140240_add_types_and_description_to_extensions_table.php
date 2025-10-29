@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -13,8 +14,11 @@ return new class extends Migration
     {
         Schema::table('extensions', function (Blueprint $table) {
             $table->text('description')->nullable()->after('name');
-            $table->json('types')->after('author')->default(json_encode(['plugin']));
+            $table->json('types')->nullable()->after('author');
         });
+
+        // Set default value for existing rows
+        DB::table('extensions')->whereNull('types')->update(['types' => json_encode(['plugin'])]);
     }
 
     /**
