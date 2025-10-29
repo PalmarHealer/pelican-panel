@@ -102,10 +102,12 @@ RUN chown root:www-data ./ \
     && mkdir -p ./app/Filament/Server/Pages/Extensions \
     && mkdir -p ./app/Filament/Server/Resources/Extensions \
     && mkdir -p ./app/Filament/Server/Widgets/Extensions \
+    && chown -R www-data:www-data ./extensions \
     && chown -R www-data:www-data ./resources/views/extensions ./resources/css/themes ./public/extensions ./lang \
     && chown -R www-data:www-data ./app/Filament/Admin/Pages/Extensions ./app/Filament/Admin/Resources/Extensions ./app/Filament/Admin/Widgets/Extensions \
     && chown -R www-data:www-data ./app/Filament/App/Pages/Extensions ./app/Filament/App/Resources/Extensions ./app/Filament/App/Widgets/Extensions \
     && chown -R www-data:www-data ./app/Filament/Server/Pages/Extensions ./app/Filament/Server/Resources/Extensions ./app/Filament/Server/Widgets/Extensions \
+    && chmod -R u+rwX,g+rwX,o-rwx ./extensions \
     && chmod -R u+rwX,g+rwX,o-rwx ./resources/views/extensions ./resources/css/themes ./public/extensions ./lang \
     && chmod -R u+rwX,g+rwX,o-rwx ./app/Filament/Admin/Pages/Extensions ./app/Filament/Admin/Resources/Extensions ./app/Filament/Admin/Widgets/Extensions \
     && chmod -R u+rwX,g+rwX,o-rwx ./app/Filament/App/Pages/Extensions ./app/Filament/App/Resources/Extensions ./app/Filament/App/Widgets/Extensions \
