@@ -109,7 +109,7 @@ RUN chown root:www-data ./ \
     && chmod -R u+rwX,g+rwX,o-rwx ./resources/views/extensions ./resources/css/themes ./public/extensions ./lang \
     && chmod -R u+rwX,g+rwX,o-rwx ./app/Filament/Admin/Pages/Extensions ./app/Filament/Admin/Resources/Extensions ./app/Filament/Admin/Widgets/Extensions \
     && chmod -R u+rwX,g+rwX,o-rwx ./app/Filament/App/Pages/Extensions ./app/Filament/App/Resources/Extensions ./app/Filament/App/Widgets/Extensions \
-    && chmod -R u+rwX,g+rwX,o-rwx ./app/Filament/Server/Pages/Extensions ./app/Filament/Server/Resources/Extensions ./app/Filament/Server/Widgets/Extensions \
+    && chmod -R u+rwX,g+rwX,o-rwx ./app/Filament/Server/Pages/Extensions ./app/Filament/Server/Resources/Extensions ./app/Filament/Server/Widgets/Extensions
 
 # Configure Supervisor
 COPY docker/supervisord.conf /etc/supervisord.conf
