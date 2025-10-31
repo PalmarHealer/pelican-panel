@@ -427,8 +427,10 @@ class ExtensionManager
                 $this->deleteExtension($extensionId);
             }
 
-            // Move from temp to extensions directory
-            \File::moveDirectory($extensionRoot, $targetPath);
+            // Copy from temp to extensions directory (don't use moveDirectory as it may fail across volumes)
+            if (!\File::copyDirectory($extensionRoot, $targetPath)) {
+                throw new \Exception("Failed to copy extension files to extensions directory. Check permissions on: $targetPath");
+            }
 
             // Clean up temp directory
             \File::deleteDirectory($tempDir);
