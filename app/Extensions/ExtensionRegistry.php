@@ -110,6 +110,7 @@ class ExtensionRegistry
      *                                        - 'group': string|null - Navigation group (admin panel only)
      *                                        - 'visible': callable|bool - Visibility condition
      *                                        - 'panels': array - Which panels to register on ['admin' => true, 'server' => true]
+     *                                        - 'egg_tags': array|null - Optional: Restrict to specific egg tags (server panel only)
      */
     public function navigationItem(
         string $itemId,

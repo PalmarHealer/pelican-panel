@@ -388,6 +388,16 @@
                                         <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $item['label'] }}</div>
                                         <div class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ $item['id'] }}</div>
                                         <div class="text-xs text-gray-400 dark:text-gray-500">Panels: {{ $item['panels'] }}</div>
+                                        @if(!empty($item['egg_tags']))
+                                            <div class="flex items-center gap-1 mt-1">
+                                                <span class="text-xs text-gray-600 dark:text-gray-400">Egg tags:</span>
+                                                <div class="flex flex-wrap gap-1">
+                                                    @foreach($item['egg_tags'] as $tag)
+                                                        <x-filament::badge color="warning" size="xs">{{ $tag }}</x-filament::badge>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             @endforeach

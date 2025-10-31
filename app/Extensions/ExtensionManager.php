@@ -861,8 +861,37 @@ class ExtensionManager
                 $navItem->group(is_callable($config['group']) ? $config['group'] : fn () => $config['group']);
             }
 
-            // Add visible if specified
-            if (isset($config['visible'])) {
+            // Add egg tag restriction for server panel
+            if ($panelId === 'server' && isset($config['egg_tags'])) {
+                $eggTags = $config['egg_tags'];
+                $existingVisible = $config['visible'] ?? null;
+
+                $navItem->visible(function () use ($eggTags, $existingVisible) {
+                    // Check existing visibility condition first
+                    if ($existingVisible !== null) {
+                        $isVisible = is_callable($existingVisible) ? $existingVisible() : $existingVisible;
+                        if (!$isVisible) {
+                            return false;
+                        }
+                    }
+
+                    // Check egg tag restriction
+                    $server = \Filament\Facades\Filament::getTenant();
+                    if (!$server) {
+                        return false;
+                    }
+
+                    $serverEggTags = $server->egg->tags ?? [];
+                    foreach ($eggTags as $requiredTag) {
+                        if (in_array($requiredTag, $serverEggTags)) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                });
+            } elseif (isset($config['visible'])) {
+                // Add visible if specified (without egg tag restriction)
                 $navItem->visible(is_callable($config['visible']) ? $config['visible'] : fn () => $config['visible']);
             }
 

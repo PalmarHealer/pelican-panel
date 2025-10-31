@@ -78,6 +78,7 @@ class ExtensionController implements ExtensionInterface
                 'icon' => 'tabler-sparkles',
                 'sort' => 50,
                 'visible' => fn () => user()?->can('example_feature.read', Filament::getTenant()) ?? false,
+                'egg_tags' => ['vanilla', 'java'], // Only show for vanilla/java servers
                 'panels' => [
                     'admin' => false,
                     'server' => true,

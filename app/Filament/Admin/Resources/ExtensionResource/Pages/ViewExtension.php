@@ -245,6 +245,7 @@ class ViewExtension extends Page
                     'label' => is_callable($config['label']) ? 'Dynamic Label' : $config['label'],
                     'panels' => implode(', ', $panels),
                     'icon' => $config['icon'] ?? 'tabler-puzzle',
+                    'egg_tags' => $config['egg_tags'] ?? null,
                 ];
             })
             ->values()
