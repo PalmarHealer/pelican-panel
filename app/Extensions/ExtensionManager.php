@@ -1027,6 +1027,7 @@ class ExtensionManager
         $overrideLangDirs = File::directories($overridesPath);
         $conflicts = [];
         $successfulOverrides = [];
+        $filesToProcess = [];
 
         foreach ($overrideLangDirs as $langDir) {
             $langCode = basename($langDir);
@@ -1053,40 +1054,60 @@ class ExtensionManager
                         'blocking_extension' => $blockingExtension->name,
                         'blocking_extension_id' => $blockingExtension->identifier,
                     ];
-
-                    continue; // Skip this file due to conflict
-                }
-
-                // No conflict, proceed with override
-                if (File::exists($targetFile)) {
-                    $backupFile = "$targetFile.backup-before-$extensionId";
-
-                    // Only create backup if this is the first override (no backup exists)
-                    if (!File::exists($backupFile)) {
-                        File::copy($targetFile, $backupFile);
-                    }
-
-                    // Merge translations
-                    $original = require $targetFile;
-                    $override = require $file->getPathname();
-                    $merged = array_replace_recursive($original, $override);
-
-                    // Write merged translations
-                    $export = "<?php\n\nreturn " . var_export($merged, true) . ";\n";
-                    File::put($targetFile, $export);
-
-                    $successfulOverrides[] = $overrideKey;
                 } else {
-                    // No original file, just copy the override
-                    File::copy($file->getPathname(), $targetFile);
-                    $successfulOverrides[] = $overrideKey;
+                    // No conflict, add to queue for processing
+                    $filesToProcess[] = [
+                        'file' => $file,
+                        'targetFile' => $targetFile,
+                        'overrideKey' => $overrideKey,
+                    ];
                 }
             }
         }
 
+        // If ANY conflicts found, return immediately without processing ANY files
+        if (!empty($conflicts)) {
+            return [
+                'success' => false,
+                'conflicts' => $conflicts,
+                'overrides' => [],
+            ];
+        }
+
+        // No conflicts found, now process all files
+        foreach ($filesToProcess as $fileData) {
+            $file = $fileData['file'];
+            $targetFile = $fileData['targetFile'];
+            $overrideKey = $fileData['overrideKey'];
+
+            if (File::exists($targetFile)) {
+                $backupFile = "$targetFile.backup-before-$extensionId";
+
+                // Only create backup if this is the first override (no backup exists)
+                if (!File::exists($backupFile)) {
+                    File::copy($targetFile, $backupFile);
+                }
+
+                // Merge translations
+                $original = require $targetFile;
+                $override = require $file->getPathname();
+                $merged = array_replace_recursive($original, $override);
+
+                // Write merged translations
+                $export = "<?php\n\nreturn " . var_export($merged, true) . ";\n";
+                File::put($targetFile, $export);
+
+                $successfulOverrides[] = $overrideKey;
+            } else {
+                // No original file, just copy the override
+                File::copy($file->getPathname(), $targetFile);
+                $successfulOverrides[] = $overrideKey;
+            }
+        }
+
         return [
-            'success' => empty($conflicts),
-            'conflicts' => $conflicts,
+            'success' => true,
+            'conflicts' => [],
             'overrides' => $successfulOverrides,
         ];
     }
@@ -1152,10 +1173,30 @@ class ExtensionManager
                 continue;
             }
 
-            // Remove symlinked language if it's a symlink
+            // Remove symlinked language if it exists
+            // Note: On Windows, is_link() may not properly detect directory symlinks,
+            // so we also check if the real path points to the extension directory
             $targetPath = base_path("lang/$langCode");
-            if (File::exists($targetPath) && is_link($targetPath)) {
-                File::delete($targetPath);
+            if (File::exists($targetPath)) {
+                $isSymlink = is_link($targetPath);
+
+                // On Windows, also check if realpath points to extension directory
+                if (!$isSymlink && PHP_OS_FAMILY === 'Windows') {
+                    $realPath = realpath($targetPath);
+                    $extensionLangPath = realpath($dir);
+                    $isSymlink = ($realPath === $extensionLangPath);
+                }
+
+                if ($isSymlink) {
+                    // For directory symlinks on Windows, use rmdir instead of unlink
+                    // This safely removes the symlink without deleting the target directory
+                    if (PHP_OS_FAMILY === 'Windows') {
+                        @rmdir($targetPath);
+                    } else {
+                        // On Unix-like systems, unlink works for symlinks
+                        @unlink($targetPath);
+                    }
+                }
             }
         }
     }
