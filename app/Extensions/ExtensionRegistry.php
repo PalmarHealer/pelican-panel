@@ -186,6 +186,7 @@ class ExtensionRegistry
             foreach ($this->permissions as $model => $data) {
                 $result[$model] = $data['actions'];
             }
+
             return $result;
         }
 
@@ -195,6 +196,7 @@ class ExtensionRegistry
                 $result[$model] = $data['actions'];
             }
         }
+
         return $result;
     }
 
