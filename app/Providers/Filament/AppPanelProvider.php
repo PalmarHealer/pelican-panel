@@ -22,6 +22,7 @@ class AppPanelProvider extends PanelProvider
             ->default()
             ->breadcrumbs(false)
             ->navigation(false)
+            ->topbar(true)
             ->userMenuItems(array_merge([
                 'to_admin' => Action::make('to_admin')
                     ->label(trans('profile.admin'))
