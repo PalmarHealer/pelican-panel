@@ -83,13 +83,8 @@ RUN chown root:www-data ./ \
     && ln -sf /var/www/html/storage/app/public /var/www/html/public/storage \
     && ln -s  /pelican-data/storage/avatars /var/www/html/storage/app/public/avatars \
     && ln -s  /pelican-data/storage/fonts /var/www/html/storage/app/public/fonts \
-    # Allow www-data write permissions where necessary
-    && chown -R www-data:www-data /pelican-data ./storage ./bootstrap/cache /var/run/supervisord /var/www/html/public/storage \
-    && chmod -R u+rwX,g+rwX,o-rwx /pelican-data ./storage ./bootstrap/cache /var/run/supervisord \
-    && chown -R www-data: /usr/local/etc/php/ \
-    # Create directories for extension system
+    # Create directories for extension system BEFORE setting general permissions
     && mkdir -p /pelican-data/extensions \
-    && ln -s /pelican-data/extensions ./extensions \
     && mkdir -p ./resources/views/extensions \
     && mkdir -p ./resources/css/themes \
     && mkdir -p ./public/extensions \
@@ -102,12 +97,17 @@ RUN chown root:www-data ./ \
     && mkdir -p ./app/Filament/Server/Pages/Extensions \
     && mkdir -p ./app/Filament/Server/Resources/Extensions \
     && mkdir -p ./app/Filament/Server/Widgets/Extensions \
-    && chown -R www-data:www-data ./extensions \
+    # Allow www-data write permissions where necessary
+    && chown -R www-data:www-data /pelican-data ./storage ./bootstrap/cache /var/run/supervisord /var/www/html/public/storage \
+    && chmod -R u+rwX,g+rwX,o-rwx /pelican-data ./storage ./bootstrap/cache /var/run/supervisord \
+    && chown -R www-data: /usr/local/etc/php/ \
+    # Create symlink for extensions after setting permissions on the target
+    && ln -s /pelican-data/extensions ./extensions \
+    # Set permissions for extension-related directories in the application
     && chown -R www-data:www-data ./resources/views/extensions ./resources/css/themes ./public/extensions ./lang \
     && chown -R www-data:www-data ./app/Filament/Admin/Pages/Extensions ./app/Filament/Admin/Resources/Extensions ./app/Filament/Admin/Widgets/Extensions \
     && chown -R www-data:www-data ./app/Filament/App/Pages/Extensions ./app/Filament/App/Resources/Extensions ./app/Filament/App/Widgets/Extensions \
     && chown -R www-data:www-data ./app/Filament/Server/Pages/Extensions ./app/Filament/Server/Resources/Extensions ./app/Filament/Server/Widgets/Extensions \
-    && chmod -R u+rwX,g+rwX,o-rwx ./extensions \
     && chmod -R u+rwX,g+rwX,o-rwx ./resources/views/extensions ./resources/css/themes ./public/extensions ./lang \
     && chmod -R u+rwX,g+rwX,o-rwx ./app/Filament/Admin/Pages/Extensions ./app/Filament/Admin/Resources/Extensions ./app/Filament/Admin/Widgets/Extensions \
     && chmod -R u+rwX,g+rwX,o-rwx ./app/Filament/App/Pages/Extensions ./app/Filament/App/Resources/Extensions ./app/Filament/App/Widgets/Extensions \
