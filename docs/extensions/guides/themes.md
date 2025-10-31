@@ -1,6 +1,6 @@
-# Creating Themes
+# Theme Development Guide
 
-This guide will walk you through creating custom themes for Pelican Panel using the extension system.
+This guide will help you create custom themes for Pelican Panel using the extension system. Themes allow you to customize the visual appearance of your panel with CSS and JavaScript.
 
 ## Table of Contents
 
@@ -10,16 +10,18 @@ This guide will walk you through creating custom themes for Pelican Panel using 
 4. [Styling with CSS](#styling-with-css)
 5. [Advanced Techniques](#advanced-techniques)
 6. [Best Practices](#best-practices)
-7. [Examples](#examples)
+7. [Theme Examples](#theme-examples)
+8. [Troubleshooting](#troubleshooting)
 
 ## Overview
 
-Themes in Pelican Panel are special extensions that modify the visual appearance of the panel. They work by:
+Themes in Pelican Panel are special extensions that modify the visual appearance of the panel.
 
-- Injecting custom CSS via render hooks
-- Optionally adding JavaScript for dynamic styling
-- Using Filament's theming capabilities
-- Supporting panel-specific styles (Admin, App, Server)
+### How Themes Work
+
+1. **CSS File Publishing** - Your theme's `public/` directory is copied to `public/extensions/{theme-id}/` when enabled
+2. **CSS Injection** - The theme uses render hooks to inject CSS into the `<head>` of all panels
+3. **Dynamic Styling** - Themes can inject inline styles or JavaScript for runtime customization
 
 ### What Themes Can Do
 
@@ -29,25 +31,27 @@ Themes in Pelican Panel are special extensions that modify the visual appearance
 - Dark/light mode variants
 - Custom component styling
 - Brand-specific designs
+- CSS animations and transitions
+- Dynamic theme switching with JavaScript
 
 ### What Themes Cannot Do
 
-- Modify core functionality
-- Change page structure (use functional extensions for that)
+- Modify core functionality (use plugins for that)
+- Change page structure
 - Override security features
 
 ## Quick Start
 
-### Creating a Basic Theme
+### Creating Your First Theme
 
-1. **Create directory structure:**
+**1. Create directory structure:**
 
 ```bash
 mkdir -p extensions/my-theme/public
 cd extensions/my-theme
 ```
 
-2. **Create `extension.json`:**
+**2. Create `extension.json`:**
 
 ```json
 {
@@ -62,7 +66,7 @@ cd extensions/my-theme
 }
 ```
 
-3. **Create `ExtensionController.php`:**
+**3. Create `ExtensionController.php`:**
 
 ```php
 <?php
@@ -96,6 +100,8 @@ class ExtensionController implements ExtensionInterface
 
     protected function injectThemeStyles(): string
     {
+        // Link to the CSS file published in public/extensions/my-theme/
+        // Add version parameter for cache busting
         $cssUrl = asset('extensions/my-theme/style.css?v=1.0.0');
 
         return <<<HTML
@@ -106,7 +112,7 @@ class ExtensionController implements ExtensionInterface
 }
 ```
 
-4. **Create `public/style.css`:**
+**4. Create `public/style.css`:**
 
 ```css
 /* My Custom Theme */
@@ -136,13 +142,13 @@ class ExtensionController implements ExtensionInterface
 }
 ```
 
-5. **Enable the theme:**
+**5. Enable the theme:**
 
 ```bash
 composer dump-autoload
 ```
 
-Then navigate to `/admin/extensions`, scan for extensions, and enable your theme.
+Navigate to `/admin/extensions`, scan for extensions, and enable your theme. Refresh to see your changes!
 
 ## Theme Structure
 
@@ -150,24 +156,40 @@ Then navigate to `/admin/extensions`, scan for extensions, and enable your theme
 
 ```
 extensions/my-theme/
-├── extension.json              # Theme metadata
-├── ExtensionController.php     # Controller that injects CSS
-├── README.md                   # Theme documentation
-└── public/                     # Public assets
-    ├── style.css              # Main theme CSS
+├── extension.json              # Theme metadata (REQUIRED)
+├── ExtensionController.php     # Theme controller (REQUIRED)
+├── README.md                   # Documentation (recommended)
+└── public/                     # Public assets (REQUIRED for themes)
+    ├── style.css              # Main stylesheet
     ├── admin.css              # Admin panel specific (optional)
     ├── app.css                # App panel specific (optional)
     ├── server.css             # Server panel specific (optional)
     ├── dark-mode.css          # Dark mode variant (optional)
     ├── fonts/                 # Custom fonts (optional)
+    │   ├── CustomFont-Regular.woff2
+    │   └── CustomFont-Bold.woff2
     └── images/                # Theme images (optional)
+        └── logo.png
+```
+
+### Asset Publishing
+
+When your theme is enabled:
+```
+extensions/my-theme/public/style.css
+↓ (copied on enable)
+public/extensions/my-theme/style.css
+↓ (accessible via)
+https://your-panel.com/extensions/my-theme/style.css
 ```
 
 ## Styling with CSS
 
 ### Understanding Filament's CSS Structure
 
-Filament uses Tailwind CSS with custom properties for theming. Key CSS variables:
+Filament uses Tailwind CSS with custom properties (CSS variables) for theming.
+
+#### Key CSS Variables
 
 ```css
 :root {
@@ -220,9 +242,44 @@ Target specific panels using CSS selectors:
 }
 ```
 
+### Targeting Filament Components
+
+Filament components have specific class prefixes:
+
+```css
+/* Sections/Cards */
+.fi-section { /* ... */ }
+.fi-card { /* ... */ }
+
+/* Buttons */
+.fi-btn { /* ... */ }
+.fi-btn-primary { /* ... */ }
+
+/* Tables */
+.fi-table { /* ... */ }
+.fi-table-row { /* ... */ }
+
+/* Forms */
+.fi-input { /* ... */ }
+.fi-select { /* ... */ }
+
+/* Sidebar */
+.fi-sidebar { /* ... */ }
+.fi-sidebar-item { /* ... */ }
+
+/* Modals */
+.fi-modal { /* ... */ }
+
+/* Notifications */
+.fi-no { /* ... */ }
+
+/* Badges */
+.fi-badge { /* ... */ }
+```
+
 ### Common Customization Targets
 
-#### 1. Navigation Sidebar
+#### Navigation Sidebar
 
 ```css
 /* Sidebar background */
@@ -247,7 +304,7 @@ Target specific panels using CSS selectors:
 }
 ```
 
-#### 2. Top Bar
+#### Top Bar
 
 ```css
 /* Top bar background */
@@ -262,7 +319,7 @@ Target specific panels using CSS selectors:
 }
 ```
 
-#### 3. Tables
+#### Tables
 
 ```css
 /* Table header */
@@ -281,7 +338,7 @@ Target specific panels using CSS selectors:
 }
 ```
 
-#### 4. Forms
+#### Forms
 
 ```css
 /* Form inputs */
@@ -302,7 +359,7 @@ Target specific panels using CSS selectors:
 }
 ```
 
-#### 5. Buttons
+#### Buttons
 
 ```css
 /* Primary button */
@@ -323,7 +380,7 @@ Target specific panels using CSS selectors:
 }
 ```
 
-#### 6. Cards/Sections
+#### Cards/Sections
 
 ```css
 /* Section container */
@@ -341,11 +398,9 @@ Target specific panels using CSS selectors:
 
 ### Dark Mode Support
 
-Create a separate dark mode stylesheet:
+Create dark mode styles:
 
 ```css
-/* dark-mode.css */
-
 /* Automatically apply when user selects dark mode */
 .dark {
     /* Background colors */
@@ -384,6 +439,8 @@ Create a separate dark mode stylesheet:
 Load different stylesheets based on panel or user preference:
 
 ```php
+use Filament\Facades\Filament;
+
 protected function injectThemeStyles(): string
 {
     $panel = Filament::getCurrentPanel()->getId();
@@ -504,6 +561,26 @@ Add smooth transitions and animations:
 }
 ```
 
+### Dynamic CSS Variables
+
+Generate CSS variables dynamically:
+
+```php
+protected function injectThemeStyles(): string
+{
+    $primaryColor = config('theme.primary_color', '#3b82f6');
+
+    return <<<HTML
+    <style>
+        :root {
+            --theme-primary: {$primaryColor};
+        }
+    </style>
+    <link rel="stylesheet" href="/extensions/my-theme/style.css">
+    HTML;
+}
+```
+
 ## Best Practices
 
 ### 1. Use CSS Variables
@@ -524,7 +601,7 @@ Don't hardcode colors - use CSS variables for easy customization:
 
 ### 2. Maintain Specificity Balance
 
-Avoid overly specific selectors that are hard to override:
+Avoid overly specific selectors:
 
 ```css
 /* ❌ Too specific */
@@ -541,14 +618,13 @@ Avoid overly specific selectors that are hard to override:
 ### 3. Test Across Panels
 
 Always test your theme in all three panels:
-
 - Admin panel (`/admin`)
 - App panel (`/app`)
 - Server panel (`/server/{uuid}`)
 
 ### 4. Ensure Accessibility
 
-Maintain good contrast ratios and accessibility:
+Maintain good contrast ratios:
 
 ```css
 /* Ensure text is readable */
@@ -589,7 +665,7 @@ Always provide dark mode support:
 
 ### 6. Version Your Assets
 
-Always include version numbers in asset URLs for cache busting:
+Always include version numbers for cache busting:
 
 ```php
 $cssUrl = asset('extensions/my-theme/style.css?v=' . $this->getVersion());
@@ -599,7 +675,7 @@ $cssUrl = asset('extensions/my-theme/style.css?v=' . $this->getVersion());
 protected function getVersion(): string
 {
     $manifest = json_decode(
-        file_read_contents(base_path('extensions/my-theme/extension.json')),
+        file_get_contents(base_path('extensions/my-theme/extension.json')),
         true
     );
 
@@ -613,9 +689,115 @@ protected function getVersion(): string
 - Remove unused styles
 - Combine multiple files when possible
 
-## Examples
+### 8. Respect User Preferences
 
-### Example 1: Dark Purple Theme
+```css
+/* Support reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+```
+
+### 9. Mobile Responsive
+
+```css
+/* Adjust for mobile screens */
+@media (max-width: 768px) {
+    .fi-sidebar {
+        width: 100%;
+    }
+}
+```
+
+### 10. Performance
+
+- Use CSS variables instead of repeating values
+- Avoid expensive selectors (`*`, deep nesting)
+- Use `will-change` sparingly
+
+```css
+/* Good - uses variables */
+.fi-btn {
+    color: var(--primary-500);
+}
+
+/* Bad - repeats value */
+.fi-btn {
+    color: #3b82f6;
+}
+```
+
+## Theme Examples
+
+### Minimalist Light Theme
+
+```css
+:root {
+    --primary-500: #000000;
+    --gray-50: #ffffff;
+    --gray-900: #f5f5f5;
+}
+
+.fi-section {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 0; /* Square edges */
+}
+
+.fi-btn-primary {
+    background: black;
+    color: white;
+    border-radius: 0;
+}
+```
+
+### Neon/Cyberpunk Theme
+
+```css
+:root {
+    --primary-500: #ff00ff;
+    --secondary-500: #00ffff;
+}
+
+.fi-section {
+    background: #0a0a0a;
+    border: 2px solid #ff00ff;
+    box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+}
+
+.fi-btn-primary {
+    background: linear-gradient(45deg, #ff00ff, #00ffff);
+    animation: neon-pulse 2s ease infinite;
+}
+
+@keyframes neon-pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 255, 0.8); }
+    50% { box-shadow: 0 0 40px rgba(255, 0, 255, 1); }
+}
+```
+
+### Nature/Earth Theme
+
+```css
+:root {
+    --primary-500: #22c55e; /* Green */
+    --gray-900: #1a2e1a; /* Dark forest */
+}
+
+.fi-section {
+    background: linear-gradient(135deg, #2d4a2d 0%, #1a2e1a 100%);
+    border: 1px solid #3a5a3a;
+}
+
+.fi-sidebar {
+    background: linear-gradient(180deg, #2d4a2d, #1a2e1a);
+}
+```
+
+### Dark Purple Theme
 
 ```css
 /* Dark Purple Theme */
@@ -639,117 +821,84 @@ protected function getVersion(): string
 }
 ```
 
-### Example 2: Minimal Clean Theme
-
-```css
-/* Minimal Clean Theme */
-:root {
-    --primary-500: #2563eb;
-}
-
-/* Remove all shadows */
-.fi-section,
-.fi-modal,
-.fi-dropdown {
-    box-shadow: none !important;
-    border: 1px solid #e5e7eb;
-}
-
-/* Simplified buttons */
-.fi-btn {
-    border-radius: 6px;
-    font-weight: 500;
-}
-
-/* Clean table design */
-.fi-table {
-    border: 1px solid #e5e7eb;
-}
-
-.fi-table-row {
-    border-bottom: 1px solid #f3f4f6;
-}
-```
-
-### Example 3: Cyberpunk Theme
-
-```css
-/* Cyberpunk Theme */
-:root {
-    --primary-500: #00ff9f;
-    --danger-500: #ff0055;
-}
-
-body {
-    background: #0a0e27;
-    font-family: 'Courier New', monospace;
-}
-
-.fi-topbar {
-    background: #0a0e27;
-    border-bottom: 2px solid #00ff9f;
-    box-shadow: 0 0 20px rgba(0, 255, 159, 0.3);
-}
-
-.fi-sidebar {
-    background: #0d1117;
-    border-right: 1px solid #00ff9f;
-}
-
-.fi-section {
-    background: #161b22;
-    border: 1px solid #00ff9f;
-    box-shadow: 0 0 15px rgba(0, 255, 159, 0.1);
-}
-
-.fi-btn-primary {
-    background: #00ff9f;
-    color: #0a0e27;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 0 15px rgba(0, 255, 159, 0.5);
-}
-```
-
 ## Troubleshooting
 
-### Styles Not Applying
+### Styles Not Loading?
 
-1. Clear browser cache (Ctrl+F5)
-2. Check asset URL is correct: view page source and verify CSS link
-3. Verify file was published: `ls public/extensions/my-theme/`
+1. Clear browser cache (Ctrl+Shift+R)
+2. Check extension is enabled in admin panel
+3. Verify file exists: `public/extensions/my-theme/style.css`
 4. Check browser console for 404 errors
 5. Clear Laravel cache: `php artisan config:clear`
 
-### Styles Overridden
+### Styles Not Applied?
 
-Increase specificity or use `!important` (sparingly):
+1. Check CSS specificity (Filament styles might override yours)
+2. Use `!important` sparingly when needed
+3. Inspect element to see which styles are applied
 
 ```css
-/* If your style is being overridden */
-.fi-section {
-    background: #ffffff !important;
+/* Increase specificity if needed */
+.fi-panel .fi-section {
+    background: your-color !important;
 }
 ```
 
-### Dark Mode Not Working
+### Conflicts with Other Extensions?
 
-Ensure you're targeting the `.dark` class:
+Theme extensions load in order. If multiple themes are enabled:
+- Later themes override earlier ones
+- Use more specific selectors
+- Consider disabling conflicting themes
 
-```css
-.dark .fi-section {
-    background: #1a202c;
+### Testing Your Theme
+
+1. **Enable Extension:** Admin → Extensions → Enable "Your Theme"
+2. **Test All Panels:** Admin, App, and Server panels
+3. **Test All Components:** Tables, forms, buttons, modals, notifications, sidebar
+4. **Test Responsive:** Desktop, tablet, mobile
+5. **Test Accessibility:** Keyboard navigation, screen readers, color contrast
+
+## Multi-Type Extensions
+
+Combine theme with other types:
+
+```json
+{
+    "id": "complete-package",
+    "types": ["plugin", "theme", "language-pack"]
 }
 ```
 
-## Next Steps
+This allows you to:
+- Add functionality (plugin)
+- Customize appearance (theme)
+- Provide translations (language-pack)
 
-- Review the [example-extension](../../extensions/example-extension/) for reference
-- Check out [Language Pack guide](creating-language-packs.md) for adding translations
-- Explore [API Reference](api-reference.md) for advanced customizations
+All in one extension!
 
 ## Resources
 
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
-- [Filament Documentation](https://filamentphp.com/docs/3.x/panels/themes)
-- [MDN CSS Reference](https://developer.mozilla.org/en-US/docs/Web/CSS)
+- [Filament Documentation](https://filamentphp.com/docs)
+- [Tailwind CSS](https://tailwindcss.com/docs)
+- [CSS Custom Properties (MDN)](https://developer.mozilla.org/en-US/docs/Web/CSS/--*)
+- [Web Accessibility Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
+
+## Example Theme
+
+For a complete working example, see the `/extensions/dark-theme/` directory which demonstrates:
+- CSS injection via render hooks
+- Custom color schemes
+- Filament component styling
+- Public asset publishing
+
+[View Dark Theme Example](../../../extensions/dark-theme/)
+
+## Next Steps
+
+- Review the [dark-theme](../../../extensions/dark-theme/) example
+- Check out the [API Reference](../api-reference.md) for render hook details
+- Explore [Extension Development](extensions.md) to add functionality alongside your theme
+- Learn about [Language Packs](language-packs.md) for custom translations
+
+Happy theming! 🎨

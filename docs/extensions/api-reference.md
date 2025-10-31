@@ -12,6 +12,7 @@ Complete API reference for the Pelican Panel Extension System.
 6. [Server Interaction](#server-interaction)
 7. [Events](#events)
 8. [Helper Functions](#helper-functions)
+9. [Helper Traits](#helper-traits)
 
 ## ExtensionRegistry
 
@@ -93,6 +94,28 @@ if (user()?->can('custom_feature.read', Filament::getTenant())) {
 
 ---
 
+#### `serverPageRestriction(string $extensionId, string $pageClass, array $eggTags): void`
+
+Restrict a server panel page to specific egg tags.
+
+**Parameters:**
+- `$extensionId` (string): Your extension identifier
+- `$pageClass` (string): Fully qualified class name of the page
+- `$eggTags` (array): Array of egg tag names to allow
+
+**Example:**
+```php
+$registry->serverPageRestriction(
+    'my-extension',
+    \App\Filament\Server\Pages\Extensions\MyExtension\MyPage::class,
+    ['minecraft', 'java', 'vanilla']
+);
+```
+
+This restricts the page to only be accessible for servers with eggs tagged as 'minecraft', 'java', or 'vanilla'. Use with the `RestrictedByEggTags` trait in your page class.
+
+---
+
 #### `navigationItem(string $id, string|\Closure $label, array $config): void`
 
 Register a navigation item in sidebar.
@@ -110,6 +133,7 @@ Register a navigation item in sidebar.
     'group' => 'Group Name',             // Navigation group (optional)
     'sort' => 100,                       // Sort order (optional)
     'visible' => fn() => true,           // Visibility condition (optional)
+    'egg_tags' => ['minecraft', 'java'], // Optional: restrict to server types (server panel only)
     'panels' => [                        // Which panels to show in
         'admin' => true,
         'server' => false,
@@ -145,6 +169,21 @@ $registry->navigationItem(
     [
         'url' => '/server/status',
         'icon' => 'tabler-circle',
+        'panels' => ['server' => true],
+    ]
+);
+```
+
+**Egg Tag Restriction (Server Panel Only):**
+```php
+$registry->navigationItem(
+    'minecraft-tools',
+    'Minecraft Tools',
+    [
+        'url' => '/server/minecraft-tools',
+        'icon' => 'tabler-pickaxe',
+        'egg_tags' => ['minecraft', 'vanilla', 'modded'], // Only show for these server types
+        'visible' => fn() => user()?->can('minecraft_tools.read', Filament::getTenant()) ?? false,
         'panels' => ['server' => true],
     ]
 );
@@ -1018,6 +1057,118 @@ Notification::make()
     ->persistent() // Don't auto-dismiss
     ->send();
 ```
+
+---
+
+## Helper Traits
+
+### HasExtensionPermissions
+
+Use this trait in server panel pages to easily check extension permissions.
+
+**Location:** `App\Filament\Server\Pages\Concerns\HasExtensionPermissions`
+
+**Methods:**
+
+#### `getExtensionPermissions(string $extensionId): array`
+
+Get all permissions for an extension with their granted status.
+
+**Returns:** Array of permissions with granted status
+```php
+[
+    'permission_category' => [
+        'read' => true,   // User has this permission
+        'write' => false, // User doesn't have this permission
+    ]
+]
+```
+
+**Example:**
+```php
+use App\Filament\Server\Pages\Concerns\HasExtensionPermissions;
+use Filament\Pages\Page;
+
+class YourPage extends Page
+{
+    use HasExtensionPermissions;
+
+    public array $userPermissions = [];
+
+    public function mount(): void
+    {
+        // Get all permissions with granted status
+        $this->userPermissions = $this->getExtensionPermissions('my-extension');
+
+        // Now you can check in your view: $userPermissions['my_feature']['read']
+    }
+}
+```
+
+#### `hasExtensionPermission(string $extensionId, string $permission): bool`
+
+Check if user has a specific extension permission.
+
+**Parameters:**
+- `$extensionId` - Extension identifier
+- `$permission` - Permission key (e.g., 'my_feature.read')
+
+**Example:**
+```php
+if ($this->hasExtensionPermission('my-extension', 'my_feature.write')) {
+    // User has permission
+}
+```
+
+#### `getExtensionPermissionsFlat(string $extensionId): array`
+
+Get flat array of all permission keys.
+
+**Returns:** Array of permission keys
+```php
+['my_feature.read', 'my_feature.write', 'my_feature.execute']
+```
+
+---
+
+### RestrictedByEggTags
+
+Use this trait in server panel pages to restrict access based on egg tags.
+
+**Location:** `App\Filament\Server\Pages\Concerns\RestrictedByEggTags`
+
+**Usage:**
+
+```php
+use App\Filament\Server\Pages\Concerns\RestrictedByEggTags;
+use Filament\Pages\Page;
+use Filament\Facades\Filament;
+
+class YourServerPage extends Page
+{
+    use RestrictedByEggTags;
+
+    // Define which egg tags can access this page
+    protected static array $eggTags = ['minecraft', 'java', 'vanilla'];
+
+    public static function canAccess(): bool
+    {
+        return parent::canAccess()
+            && static::checkEggRestrictions() // Checks egg tags automatically
+            && (user()?->can('control.console', Filament::getTenant()) ?? false);
+    }
+}
+```
+
+**Methods:**
+
+#### `checkEggRestrictions(): bool`
+
+Check if current server's egg has any of the required tags.
+
+**Returns:** `true` if server matches required tags, `false` otherwise
+
+**Note:** This method automatically reads from the `$eggTags` property and checks against the extension's registered page restrictions.
 
 ---
 
