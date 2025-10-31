@@ -32,6 +32,14 @@ class ExtensionController implements ExtensionInterface
             'egg_tags' => ['vanilla', 'java'], // Only show for vanilla/java servers
         ]);
 
+        // Register server page restrictions
+        // This restricts the ExampleServerPage to only show for servers with vanilla or java egg tags
+        $registry->serverPageRestriction(
+            'example-extension',
+            \App\Filament\Server\Pages\Extensions\ExampleExtension\ExampleServerPage::class,
+            ['vanilla', 'java']
+        );
+
         $registry->renderHook(
             PanelsRenderHook::FOOTER,
             fn () => view('extensions.example-extension.footer-message')

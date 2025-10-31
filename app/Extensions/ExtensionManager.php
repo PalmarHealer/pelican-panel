@@ -137,9 +137,6 @@ class ExtensionManager
             // Set the current extension in the registry
             $this->registry->setCurrentExtension($extensionId);
 
-            // Auto-register egg restrictions from metadata
-            $this->registerEggRestrictions($extensionId, $extension);
-
             // Call extension's register method
             $extension['controller']->register($this->registry);
 
@@ -148,44 +145,6 @@ class ExtensionManager
         });
 
         $this->registered = true;
-    }
-
-    /**
-     * Auto-register egg restrictions for server pages from extension.json metadata.
-     *
-     * @param  array<string, mixed>  $extension
-     */
-    protected function registerEggRestrictions(string $extensionId, array $extension): void
-    {
-        $metadata = $extension['metadata'];
-        $extensionPath = $extension['path'];
-
-        // Check if extension has egg restrictions defined in metadata
-        if (!isset($metadata['egg_restrictions'])) {
-            return;
-        }
-
-        $restrictions = $metadata['egg_restrictions'];
-        $studlyId = str($extensionId)->studly()->toString();
-
-        // Register restrictions for each specified page
-        foreach ($restrictions as $pageRelativePath => $eggTags) {
-            // Build the full page class name
-            // Support format: "server/Pages/PageName" => ["tag1", "tag2"]
-            $parts = explode('/', $pageRelativePath);
-
-            if (count($parts) >= 3) {
-                $panel = ucfirst($parts[0]); // e.g., "Server"
-                $type = $parts[1]; // e.g., "Pages"
-                $className = str_replace('.php', '', end($parts));
-
-                $fullClassName = "App\\Filament\\{$panel}\\{$type}\\Extensions\\{$studlyId}\\{$className}";
-
-                if (class_exists($fullClassName)) {
-                    $this->registry->serverPageRestriction($extensionId, $fullClassName, $eggTags);
-                }
-            }
-        }
     }
 
     /**

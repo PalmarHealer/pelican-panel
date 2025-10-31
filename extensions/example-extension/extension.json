@@ -6,8 +6,5 @@
     "author": "Palmar Healer",
     "author_email": "support@example.dev",
     "types": ["plugin"],
-    "controller": "ExtensionController",
-    "egg_restrictions": {
-        "server/Pages/ExampleServerPage": ["vanilla", "java"]
-    }
+    "controller": "ExtensionController"
 }
