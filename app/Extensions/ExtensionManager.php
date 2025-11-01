@@ -251,6 +251,9 @@ class ExtensionManager
         // Load and register extension
         $this->loadExtension($extensionPath);
         $this->registerAll();
+
+        // Clear all caches to ensure Filament picks up the new extension
+        $this->clearCaches();
     }
 
     /**
@@ -287,6 +290,9 @@ class ExtensionManager
         // Unpublish themes and language packs
         $this->unpublishTheme($extensionId);
         $this->unpublishLanguagePack($extensionId);
+
+        // Clear all caches to ensure stale navigation entries are removed
+        $this->clearCaches();
     }
 
     /**
@@ -1256,6 +1262,21 @@ class ExtensionManager
         // Clear the override tracking from database
         if ($extension) {
             $extension->update(['language_overrides' => null]);
+        }
+    }
+
+    /**
+     * Clear all caches to ensure changes are reflected immediately.
+     * This is crucial in Docker/production environments where OPcache is enabled.
+     */
+    protected function clearCaches(): void
+    {
+        // Clear Laravel caches
+        Artisan::call('optimize:clear');
+
+        // Clear OPcache if available
+        if (function_exists('opcache_reset')) {
+            opcache_reset();
         }
     }
 }
