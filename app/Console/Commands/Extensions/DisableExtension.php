@@ -33,9 +33,6 @@ class DisableExtension extends Command
         try {
             $manager->disable($extensionId);
             $this->info("Extension '{$extensionId}' has been disabled successfully.");
-            $this->newLine();
-            $this->warn('Note: You may need to clear cache or restart services for changes to take effect.');
-            $this->comment('Run: php artisan cache:clear && php artisan config:clear');
 
             return self::SUCCESS;
         } catch (\Exception $e) {
