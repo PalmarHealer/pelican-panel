@@ -6,7 +6,7 @@ use Filament\Pages\Page;
 
 class ExampleAppPage extends Page
 {
-    protected static ?string $slug = 'extensions/example-app-page';
+    protected static ?string $slug = 'addon/example-app-page';
 
     protected static string|\BackedEnum|null $navigationIcon = 'tabler-sparkles';
 
@@ -23,6 +23,7 @@ class ExampleAppPage extends Page
 
     public function getTitle(): string
     {
+        Log::info('ExampleAppPage::getTitle() called');
         return 'Example App Page';
     }
 
@@ -43,4 +44,6 @@ class ExampleAppPage extends Page
         // No permission required - accessible to all authenticated users
         return true;
     }
+
+    public function mount(): void { }
 }

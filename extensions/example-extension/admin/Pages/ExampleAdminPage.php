@@ -6,7 +6,7 @@ use Filament\Pages\Page;
 
 class ExampleAdminPage extends Page
 {
-    protected static ?string $slug = 'extensions/example-admin-page';
+    protected static ?string $slug = 'addon/example-admin-page';
 
     protected static string|\BackedEnum|null $navigationIcon = 'tabler-sparkles';
 

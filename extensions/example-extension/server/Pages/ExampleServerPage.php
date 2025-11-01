@@ -11,7 +11,7 @@ class ExampleServerPage extends Page
 {
     use HasExtensionPermissions, RestrictedByEggTags;
 
-    protected static ?string $slug = 'extensions/example-server-page';
+    protected static ?string $slug = 'addon/example-server-page';
 
     protected static string|\BackedEnum|null $navigationIcon = 'tabler-sparkles';
 
